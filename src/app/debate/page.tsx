@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { AppShell } from "@/components/AppShell";
 import {
-  GraduationCap, Siren, Newspaper, Home,
   CheckCircle, XCircle, HelpCircle, Lightbulb, Zap, Timer,
   AlertTriangle, ArrowRight, Sparkles, Scale,
 } from "lucide-react";
@@ -69,12 +68,6 @@ const AGENT_META: Record<AgentName, {
   },
 };
 
-function AgentIcon({ agent, size = 18 }: { agent: AgentName; size?: number }) {
-  if (agent === "professor")  return <GraduationCap size={size} />;
-  if (agent === "activist")   return <Siren size={size} />;
-  if (agent === "journalist") return <Newspaper size={size} />;
-  return <Home size={size} />;
-}
 
 function Spinner() {
   return <span className="inline-block w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin-slow" />;
@@ -164,7 +157,7 @@ function SynthesisPanel({ synthesis }: { synthesis: DebateSynthesis }) {
 
       {/* Consensus quote */}
       <div className="border-l-2 border-indigo-500/50 pl-4">
-        <p className="text-sm text-white/80 italic leading-relaxed">"{synthesis.consensus}"</p>
+        <p className="text-sm text-white/80 italic leading-relaxed">&ldquo;{synthesis.consensus}&rdquo;</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
