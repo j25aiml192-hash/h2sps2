@@ -1,19 +1,12 @@
 "use client";
 
-import {
-  MessageSquare, Vote, Newspaper, Mic,
-  LayoutDashboard, Settings, Brain,
-} from "lucide-react";
+import { MessageSquare, Newspaper, Brain } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 const NAV = [
-  { href: "/",          label: "AI Assistant",       icon: <Brain size={13} /> },
-  { href: "/debate",    label: "Policy Simulator",   icon: <MessageSquare size={13} /> },
-  { href: "/election",  label: "Civic Planner",      icon: <Vote size={13} /> },
-  { href: "/news",      label: "Intelligence Feed",  icon: <Newspaper size={13} /> },
-  { href: "/voice",     label: "Voice Commands",     icon: <Mic size={13} /> },
-  { href: "/dashboard", label: "Dashboard",          icon: <LayoutDashboard size={13} /> },
-  { href: "/admin",     label: "Admin",              icon: <Settings size={13} /> },
+  { href: "/",       label: "AI Assistant",      icon: <Brain size={13} /> },
+  { href: "/debate", label: "Policy Simulator",  icon: <MessageSquare size={13} /> },
+  { href: "/news",   label: "Intelligence Feed", icon: <Newspaper size={13} /> },
 ];
 
 interface AppShellProps {
