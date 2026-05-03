@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AppShell } from "@/components/AppShell";
 import { AlertTriangle, CheckCircle, Zap, ChevronDown, Users, GraduationCap, Siren, Newspaper, Home } from "lucide-react";
 import type { DebateResult, AgentResponse } from "@/lib/election-agents";
@@ -113,12 +113,29 @@ function SynthesisPanel({ synthesis, followUpQuestions, onFollowUp }: {
 }
 
 export default function ElectionDebatePage() {
-  const [topic, setTopic]            = useState("");
-  const [state, setState]            = useState("");
-  const [firstTimeVoter, setFTVoter] = useState(false);
-  const [loading, setLoading]        = useState(false);
-  const [result, setResult]          = useState<DebateResult | null>(null);
-  const [error, setError]            = useState<string | null>(null);
+  const [mounted, setMounted]          = useState(false);
+  const [topic, setTopic]              = useState("");
+  const [state, setState]              = useState("");
+  const [firstTimeVoter, setFTVoter]   = useState(false);
+  const [loading, setLoading]          = useState(false);
+  const [result, setResult]            = useState<DebateResult | null>(null);
+  const [error, setError]              = useState<string | null>(null);
+
+  useEffect(() => setMounted(true), []);
+
+  if (!mounted) {
+    return (
+      <AppShell subtitle="Civic Planner">
+        <div className="max-w-5xl mx-auto px-6 py-[42px] space-y-[42px]">
+          <div className="text-center space-y-2">
+            <div className="h-9 w-48 bg-surface-2 rounded-xl mx-auto animate-pulse" />
+            <div className="h-4 w-80 bg-surface-2 rounded-lg mx-auto animate-pulse" />
+          </div>
+          <div className="rounded-2xl border border-hairline bg-surface-1 p-md h-40 animate-pulse" />
+        </div>
+      </AppShell>
+    );
+  }
 
   async function runDebate(t = topic) {
     if (!t.trim()) return;

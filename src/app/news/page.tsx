@@ -31,11 +31,17 @@ const CAT: Record<ArticleCategory, { badge: string; label: string }> = {
 };
 const AGENTS = ["professor", "activist", "journalist", "citizen"] as const;
 const AGENT_META = {
-  professor:  { icon: <GraduationCap size={12} />, color: "border-blue-200 bg-blue-50/40" },
-  activist:   { icon: <Siren size={12} />,         color: "border-red-200 bg-red-50/40" },
-  journalist: { icon: <Newspaper size={12} />,     color: "border-amber-200 bg-amber-50/40" },
-  citizen:    { icon: <Home size={12} />,          color: "border-green-200 bg-green-50/40" },
+  professor:  { color: "border-blue-200 bg-blue-50/40" },
+  activist:   { color: "border-red-200 bg-red-50/40" },
+  journalist: { color: "border-amber-200 bg-amber-50/40" },
+  citizen:    { color: "border-green-200 bg-green-50/40" },
 };
+function AgentIcon({ id, size = 12 }: { id: string; size?: number }) {
+  if (id === "professor")  return <GraduationCap size={size} />;
+  if (id === "activist")   return <Siren size={size} />;
+  if (id === "journalist") return <Newspaper size={size} />;
+  return <Home size={size} />;
+}
 const CATEGORIES: (ArticleCategory | "all")[] = ["all","Scheme","Timeline Event","Rule Change","Result","Analysis"];
 
 function Spinner() { return <span className="inline-block w-4 h-4 border-2 border-accent-blue border-t-transparent rounded-full animate-spin-slow" />; }
@@ -71,7 +77,7 @@ function DebateModal({ debate, onClose }: { debate: DebateDetail; onClose: () =>
               const m = AGENT_META[agent];
               return (
                 <div key={agent} className={`rounded-xl border ${m.color} p-sm`}>
-                  <div className="flex items-center gap-2 mb-2">{m.icon}<span className="text-caption font-semibold text-ink capitalize">{agent}</span><span className="ml-auto text-caption text-ink-muted font-mono">{r.latencyMs}ms</span></div>
+                  <div className="flex items-center gap-2 mb-2"><AgentIcon id={agent} /><span className="text-caption font-semibold text-ink capitalize">{agent}</span><span className="ml-auto text-caption text-ink-muted font-mono">{r.latencyMs}ms</span></div>
                   <p className="text-caption text-ink leading-relaxed">{r.text ?? "No response"}</p>
                 </div>
               );
@@ -146,17 +152,20 @@ function ArticleCard({ article, debateLink, onViewDebate, onTriggerDebate }: {
 }
 
 export default function NewsPage() {
-  const [loading, setLoading]   = useState(false);
+  const [mounted, setMounted]    = useState(false);
+  const [loading, setLoading]    = useState(false);
   const [runResult, setRunResult] = useState<RunSummary | null>(null);
-  const [error, setError]       = useState<string | null>(null);
-  const [source, setSource]     = useState<"all"|"newsapi"|"rss">("all");
-  const [limit, setLimit]       = useState(10);
+  const [error, setError]        = useState<string | null>(null);
+  const [source, setSource]      = useState<"all"|"newsapi"|"rss">("all");
+  const [limit, setLimit]        = useState(10);
   const [filterCat, setFilterCat] = useState<ArticleCategory | "all">("all");
   const [filterScheme, setFilterScheme] = useState(false);
-  const [sortBy, setSortBy]     = useState<"relevance"|"recency">("relevance");
+  const [sortBy, setSortBy]      = useState<"relevance"|"recency">("relevance");
   const [debateLinks, setDebateLinks] = useState<Record<string, DebateLink>>({});
   const [openDebate, setOpenDebate]   = useState<DebateDetail | null>(null);
   const [triggeringId, setTriggeringId] = useState<string | null>(null);
+
+  useEffect(() => setMounted(true), []);
 
   const articles = useMemo(() => runResult?.articles ?? [], [runResult]);
 
@@ -198,6 +207,19 @@ export default function NewsPage() {
       const res  = await fetch("/api/agents/debate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ debateId }) });
       setOpenDebate(await res.json() as DebateDetail);
     } catch { /**/ }
+  }
+
+  if (!mounted) {
+    return (
+      <AppShell subtitle="Intelligence Feed">
+        <div className="max-w-7xl mx-auto px-6 py-[42px] space-y-[42px]">
+          <div className="h-12 w-72 bg-surface-2 rounded-2xl animate-pulse" />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-sm">
+            {[1,2,3,4,5,6].map((i) => <div key={i} className="h-48 bg-surface-2 rounded-2xl animate-pulse" />)}
+          </div>
+        </div>
+      </AppShell>
+    );
   }
 
   const filtered = articles

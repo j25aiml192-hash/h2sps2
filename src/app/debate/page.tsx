@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AppShell } from "@/components/AppShell";
 import {
   GraduationCap, Siren, Newspaper, Home,
@@ -38,32 +38,20 @@ interface DebateResponse {
   totalDurationMs: number;
 }
 
-const AGENT_META: Record<AgentName, { icon: React.ReactNode; label: string; badge: string; card: string }> = {
-  professor: {
-    icon: <GraduationCap size={16} />,
-    label: "Professor",
-    badge: "bg-blue-50 text-blue-700 border-blue-200",
-    card:  "border-blue-200 bg-blue-50/40",
-  },
-  activist: {
-    icon: <Siren size={16} />,
-    label: "Activist",
-    badge: "bg-red-50 text-red-700 border-red-200",
-    card:  "border-red-200 bg-red-50/40",
-  },
-  journalist: {
-    icon: <Newspaper size={16} />,
-    label: "Journalist",
-    badge: "bg-amber-50 text-amber-700 border-amber-200",
-    card:  "border-amber-200 bg-amber-50/40",
-  },
-  citizen: {
-    icon: <Home size={16} />,
-    label: "Citizen",
-    badge: "bg-green-50 text-green-700 border-green-200",
-    card:  "border-green-200 bg-green-50/40",
-  },
+const AGENT_META: Record<AgentName, { label: string; badge: string; card: string }> = {
+  professor: { label: "Professor", badge: "bg-blue-50 text-blue-700 border-blue-200", card: "border-blue-200 bg-blue-50/40" },
+  activist:  { label: "Activist",  badge: "bg-red-50 text-red-700 border-red-200",   card: "border-red-200 bg-red-50/40"   },
+  journalist:{ label: "Journalist",badge: "bg-amber-50 text-amber-700 border-amber-200", card: "border-amber-200 bg-amber-50/40" },
+  citizen:   { label: "Citizen",   badge: "bg-green-50 text-green-700 border-green-200", card: "border-green-200 bg-green-50/40" },
 };
+
+function AgentIcon({ agent }: { agent: AgentName }) {
+  if (agent === "professor")  return <GraduationCap size={16} />;
+  if (agent === "activist")   return <Siren size={16} />;
+  if (agent === "journalist") return <Newspaper size={16} />;
+  return <Home size={16} />;
+}
+
 
 const FOLLOW_UP_COLORS: Record<FollowUpQuestion["category"], string> = {
   "Deeper Dive":           "bg-indigo-50 text-indigo-700 border-indigo-200",
@@ -81,7 +69,7 @@ function AgentCard({ result }: { result: AgentResult }) {
     <div className={`rounded-2xl border ${meta.card} p-md flex flex-col gap-3 animate-slide-up`}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-ink-muted">{meta.icon}</span>
+          <span className="text-ink-muted"><AgentIcon agent={result.agent} /></span>
           <span className="font-semibold text-ink text-body-sm">{meta.label}</span>
         </div>
         <div className="flex items-center gap-2">
@@ -178,10 +166,30 @@ const EXAMPLE_TOPICS = [
 ];
 
 export default function DebatePage() {
-  const [topic, setTopic]   = useState("");
+  const [mounted, setMounted] = useState(false);
+  const [topic, setTopic]     = useState("");
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<DebateResponse | null>(null);
-  const [error, setError]   = useState<string | null>(null);
+  const [result, setResult]   = useState<DebateResponse | null>(null);
+  const [error, setError]     = useState<string | null>(null);
+
+  useEffect(() => setMounted(true), []);
+
+  if (!mounted) {
+    return (
+      <AppShell subtitle="Policy Simulator">
+        <div className="max-w-7xl mx-auto px-6 py-[42px] space-y-[42px]">
+          <div className="text-center space-y-2">
+            <div className="h-9 w-56 bg-surface-2 rounded-xl mx-auto animate-pulse" />
+            <div className="h-4 w-96 bg-surface-2 rounded-lg mx-auto animate-pulse" />
+          </div>
+          <div className="max-w-3xl mx-auto flex gap-3">
+            <div className="flex-1 h-12 bg-surface-2 rounded-2xl animate-pulse" />
+            <div className="w-28 h-12 bg-surface-2 rounded-2xl animate-pulse" />
+          </div>
+        </div>
+      </AppShell>
+    );
+  }
 
   async function handleDebate(topicOverride?: string) {
     const finalTopic = topicOverride ?? topic;
@@ -247,7 +255,7 @@ export default function DebatePage() {
                 return (
                   <div key={a} className={`rounded-2xl border ${m.card} p-md space-y-3`}>
                     <div className="flex items-center gap-2">
-                      <span className="text-ink-muted">{m.icon}</span>
+                      <span className="text-ink-muted"><AgentIcon agent={a} /></span>
                       <span className="text-body-sm font-semibold text-ink">{m.label}</span>
                       <Spinner />
                     </div>

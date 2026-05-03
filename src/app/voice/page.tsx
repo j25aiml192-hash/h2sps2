@@ -19,12 +19,18 @@ interface DebateResult {
   followUpQuestions?: string[];
 }
 
-const AGENTS = [
-  { id: "professor", icon: <GraduationCap size={14} />, label: "Professor",  card: "border-blue-200 bg-blue-50/40",   wave: "bg-blue-400" },
-  { id: "activist",  icon: <Siren size={14} />,         label: "Activist",   card: "border-red-200 bg-red-50/40",     wave: "bg-red-400"  },
-  { id: "journalist",icon: <Newspaper size={14} />,     label: "Journalist", card: "border-amber-200 bg-amber-50/40", wave: "bg-amber-400" },
-  { id: "citizen",   icon: <Home size={14} />,          label: "Citizen",    card: "border-green-200 bg-green-50/40", wave: "bg-green-400" },
-] as const;
+const AGENT_IDS = ["professor", "activist", "journalist", "citizen"] as const;
+type AgentId = typeof AGENT_IDS[number];
+
+function getAgentMeta(id: AgentId) {
+  const map = {
+    professor:  { icon: <GraduationCap size={14} />, label: "Professor",  card: "border-blue-200 bg-blue-50/40",   wave: "bg-blue-400" },
+    activist:   { icon: <Siren size={14} />,         label: "Activist",   card: "border-red-200 bg-red-50/40",     wave: "bg-red-400"  },
+    journalist: { icon: <Newspaper size={14} />,     label: "Journalist", card: "border-amber-200 bg-amber-50/40", wave: "bg-amber-400" },
+    citizen:    { icon: <Home size={14} />,          label: "Citizen",    card: "border-green-200 bg-green-50/40", wave: "bg-green-400" },
+  } as const;
+  return { id, ...map[id] };
+}
 
 function WaveformBars({ active, color = "bg-accent-blue" }: { active: boolean; color?: string }) {
   return (
@@ -38,7 +44,7 @@ function WaveformBars({ active, color = "bg-accent-blue" }: { active: boolean; c
   );
 }
 
-function AgentCard({ agent, response, isPlaying }: { agent: typeof AGENTS[number]; response?: AgentResponse; isPlaying: boolean }) {
+function AgentCard({ agent, response, isPlaying }: { agent: ReturnType<typeof getAgentMeta>; response?: AgentResponse; isPlaying: boolean }) {
   return (
     <div className={`relative rounded-2xl border ${agent.card} overflow-hidden transition-all ${isPlaying ? "ring-2 ring-accent-blue shadow-sm" : ""}`}>
       {isPlaying && <div className="absolute inset-x-0 top-0 h-0.5 bg-accent-blue animate-pulse" />}
@@ -66,6 +72,7 @@ function AgentCard({ agent, response, isPlaying }: { agent: typeof AGENTS[number
 type PagePhase = "idle" | "listening" | "confirming" | "debating" | "reading" | "done";
 
 export default function VoicePage() {
+  const [mounted, setMounted]         = useState(false);
   const [phase, setPhase]             = useState<PagePhase>("idle");
   const [topic, setTopic]             = useState("");
   const [saveAudio, setSaveAudio]     = useState(false);
@@ -75,6 +82,10 @@ export default function VoicePage() {
   const [sttProvider, setSttProvider] = useState<string | null>(null);
   const [ttsProvider, setTtsProvider] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+
+  const AGENTS = AGENT_IDS.map(getAgentMeta);
+
+  useEffect(() => setMounted(true), []);
 
   const onFinalTranscript = useCallback((result: TranscriptionResult) => {
     setTopic(result.text); setSttProvider(result.provider); setPhase("confirming");
@@ -121,6 +132,17 @@ export default function VoicePage() {
     confirming: "bg-blue-50 text-blue-700 border-blue-200", debating: "bg-amber-50 text-amber-700 border-amber-200",
     reading: "bg-purple-50 text-purple-700 border-purple-200", done: "bg-green-50 text-green-700 border-green-200",
   };
+
+  if (!mounted) {
+    return (
+      <AppShell subtitle="Voice Commands">
+        <div className="max-w-2xl mx-auto px-6 py-[68px] flex flex-col items-center gap-[42px]">
+          <div className="w-24 h-24 rounded-full bg-surface-2 animate-pulse" />
+          <div className="h-6 w-64 bg-surface-2 rounded-xl animate-pulse" />
+        </div>
+      </AppShell>
+    );
+  }
 
   const headerRight = (sttProvider || ttsProvider) ? (
     <div className="flex gap-2">
