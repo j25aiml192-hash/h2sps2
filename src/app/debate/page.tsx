@@ -3,8 +3,9 @@
 import { useState, useEffect } from "react";
 import { AppShell } from "@/components/AppShell";
 import {
+  GraduationCap, Siren, Newspaper, Home,
   CheckCircle, XCircle, HelpCircle, Lightbulb, Zap, Timer,
-  AlertTriangle, ArrowRight, Sparkles, Scale,
+  AlertTriangle, ArrowRight, Play,
 } from "lucide-react";
 import type { AgentName } from "@/lib/agent-configs";
 import type { FactCheck, FollowUpQuestion, DebateSynthesis } from "@/lib/debate-types";
@@ -39,156 +40,158 @@ interface DebateResponse {
 }
 
 const AGENT_META: Record<AgentName, {
-  label: string; title: string; emoji: string;
-  gradient: string; border: string; badge: string; glow: string;
+  label: string; title: string; role: string;
+  icon: React.ReactNode;
+  badge: string; card: string; accent: string;
 }> = {
   professor: {
-    label: "Professor", title: "Elena Vasquez", emoji: "🎓",
-    gradient: "from-blue-950/60 to-blue-900/30",
-    border: "border-blue-500/30", badge: "bg-blue-500/20 text-blue-300 border-blue-400/30",
-    glow: "shadow-blue-500/10",
+    label: "Professor", title: "Elena Vasquez", role: "Academic Researcher",
+    icon: <GraduationCap size={18} />,
+    badge: "bg-blue-50 text-blue-700 border-blue-200",
+    card:  "border-blue-100 bg-blue-50/30",
+    accent: "text-blue-600",
   },
   activist: {
-    label: "Activist", title: "Maya Chen", emoji: "✊",
-    gradient: "from-red-950/60 to-red-900/30",
-    border: "border-red-500/30", badge: "bg-red-500/20 text-red-300 border-red-400/30",
-    glow: "shadow-red-500/10",
+    label: "Activist", title: "Maya Chen", role: "Community Organiser",
+    icon: <Siren size={18} />,
+    badge: "bg-red-50 text-red-700 border-red-200",
+    card:  "border-red-100 bg-red-50/30",
+    accent: "text-red-600",
   },
   journalist: {
-    label: "Journalist", title: "James Okafor", emoji: "📰",
-    gradient: "from-amber-950/60 to-amber-900/30",
-    border: "border-amber-500/30", badge: "bg-amber-500/20 text-amber-300 border-amber-400/30",
-    glow: "shadow-amber-500/10",
+    label: "Journalist", title: "James Okafor", role: "Investigative Reporter",
+    icon: <Newspaper size={18} />,
+    badge: "bg-amber-50 text-amber-700 border-amber-200",
+    card:  "border-amber-100 bg-amber-50/30",
+    accent: "text-amber-600",
   },
   citizen: {
-    label: "Citizen", title: "Amit Patil", emoji: "🙋",
-    gradient: "from-emerald-950/60 to-emerald-900/30",
-    border: "border-emerald-500/30", badge: "bg-emerald-500/20 text-emerald-300 border-emerald-400/30",
-    glow: "shadow-emerald-500/10",
+    label: "Citizen", title: "Amit Patil", role: "First-time Voter",
+    icon: <Home size={18} />,
+    badge: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    card:  "border-emerald-100 bg-emerald-50/30",
+    accent: "text-emerald-600",
   },
 };
 
+const AGENT_BIOS: Record<AgentName, string> = {
+  professor:  "Evidence-driven analysis with 25 years of policy research. Cites studies, structures arguments thesis-first, avoids oversimplification.",
+  activist:   "Frontline community experience. Leads with human stories and moral clarity. Challenges power structures, asks who benefits.",
+  journalist: "15 years covering policy and politics. Ruthlessly factual, balanced across sides. Follows the money and the data.",
+  citizen:    "A young first-time voter's perspective. Simple language, relatable examples, genuine curiosity — the voice of the street.",
+};
+
+const AGENT_ORDER: AgentName[] = ["professor", "activist", "journalist", "citizen"];
 
 function Spinner() {
-  return <span className="inline-block w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin-slow" />;
+  return <span className="inline-block w-4 h-4 border-2 border-accent-blue border-t-transparent rounded-full animate-spin-slow" />;
 }
 
-function AgentCard({ result }: { result: AgentResult }) {
-  const meta = AGENT_META[result.agent];
-  const ok = result.status === "success";
+function AgentPersonaCard({ agent }: { agent: AgentName }) {
+  const meta = AGENT_META[agent];
   return (
-    <div className={`rounded-2xl border ${meta.border} bg-gradient-to-br ${meta.gradient} p-5 flex flex-col gap-4 shadow-lg ${meta.glow} animate-slide-up backdrop-blur-sm`}>
-      {/* Header */}
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl border ${meta.border} bg-black/20`}>
-            {meta.emoji}
-          </div>
-          <div>
-            <p className="text-sm font-bold text-white">{meta.label}</p>
-            <p className="text-xs text-white/50">{meta.title}</p>
-          </div>
+    <div className={`rounded-2xl border ${meta.card} p-md flex flex-col gap-3`}>
+      <div className="flex items-center gap-3">
+        <div className={`w-9 h-9 rounded-xl border ${meta.badge} flex items-center justify-center`}>
+          {meta.icon}
         </div>
-        <div className="flex flex-col items-end gap-1.5">
-          <span className={`text-xs px-2 py-0.5 rounded-full border ${meta.badge} font-mono`}>{result.provider}</span>
-          {ok && <span className="text-xs text-white/40 font-mono">{result.latencyMs}ms</span>}
+        <div>
+          <p className="text-body-sm font-semibold text-ink">{meta.label}</p>
+          <p className="text-caption text-ink-muted">{meta.title}</p>
         </div>
+        <span className={`ml-auto text-caption px-2 py-0.5 rounded-full border ${meta.badge}`}>{meta.role}</span>
       </div>
+      <p className="text-caption text-ink-muted leading-relaxed">{AGENT_BIOS[agent]}</p>
+    </div>
+  );
+}
 
-      {/* Divider */}
-      <div className={`h-px bg-gradient-to-r from-transparent via-white/10 to-transparent`} />
-
-      {/* Content */}
-      {ok ? (
-        <p className="text-sm text-white/85 leading-relaxed">{result.text}</p>
-      ) : (
-        <div className="flex items-center gap-2 text-sm text-white/40 italic py-2">
-          <AlertTriangle size={14} className="text-yellow-500 shrink-0" />
-          <span>Agent unavailable — {result.status === "timeout" ? "timed out" : "provider error"}</span>
+function AgentLoadingCard({ agent }: { agent: AgentName }) {
+  const meta = AGENT_META[agent];
+  return (
+    <div className={`rounded-2xl border ${meta.card} p-md flex flex-col gap-3`}>
+      <div className="flex items-center gap-3">
+        <div className={`w-9 h-9 rounded-xl border ${meta.badge} flex items-center justify-center`}>
+          {meta.icon}
         </div>
-      )}
-
-      {/* Footer model tag */}
-      <div className="mt-auto">
-        <span className={`text-xs font-mono px-2 py-0.5 rounded border ${meta.border} text-white/30`}>{result.model}</span>
-        {result.usedFallback && <span className="ml-2 text-xs text-yellow-400/70">↩ fallback</span>}
+        <div>
+          <p className="text-body-sm font-semibold text-ink">{meta.label}</p>
+          <p className="text-caption text-ink-muted">{meta.title}</p>
+        </div>
+        <span className="ml-auto flex items-center gap-1.5 text-caption text-ink-muted">
+          <Spinner /> thinking…
+        </span>
+      </div>
+      <div className="space-y-2 animate-pulse">
+        <div className="h-3 w-full rounded-full bg-surface-2" />
+        <div className="h-3 w-11/12 rounded-full bg-surface-2" />
+        <div className="h-3 w-4/5 rounded-full bg-surface-2" />
+        <div className="h-3 w-3/4 rounded-full bg-surface-2" />
       </div>
     </div>
   );
 }
 
-function AgentCardSkeleton({ agent }: { agent: AgentName }) {
-  const meta = AGENT_META[agent];
+function AgentResultCard({ result }: { result: AgentResult }) {
+  const meta = AGENT_META[result.agent];
+  const ok = result.status === "success";
   return (
-    <div className={`rounded-2xl border ${meta.border} bg-gradient-to-br ${meta.gradient} p-5 flex flex-col gap-4 shadow-lg animate-pulse`}>
+    <div className={`rounded-2xl border ${meta.card} p-md flex flex-col gap-3 animate-slide-up`}>
       <div className="flex items-center gap-3">
-        <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl border ${meta.border} bg-black/20`}>
-          {meta.emoji}
+        <div className={`w-9 h-9 rounded-xl border ${meta.badge} flex items-center justify-center`}>
+          {meta.icon}
         </div>
-        <div className="space-y-1.5">
-          <div className="h-3 w-20 rounded bg-white/10" />
-          <div className="h-2.5 w-16 rounded bg-white/10" />
+        <div>
+          <p className="text-body-sm font-semibold text-ink">{meta.label}</p>
+          <p className="text-caption text-ink-muted font-mono">{result.model}</p>
         </div>
         <div className="ml-auto flex items-center gap-2">
-          <Spinner />
-          <span className="text-xs text-white/40">thinking…</span>
+          {result.usedFallback && (
+            <span className="text-caption px-2 py-0.5 rounded-full bg-yellow-50 text-yellow-700 border border-yellow-200">fallback</span>
+          )}
+          <span className={`text-caption px-2 py-0.5 rounded-full border ${meta.badge}`}>{result.provider}</span>
+          {ok && <span className="text-caption text-ink-muted font-mono">{result.latencyMs}ms</span>}
         </div>
       </div>
-      <div className={`h-px bg-gradient-to-r from-transparent via-white/10 to-transparent`} />
-      <div className="space-y-2">
-        <div className="h-3 w-full rounded bg-white/10" />
-        <div className="h-3 w-11/12 rounded bg-white/10" />
-        <div className="h-3 w-4/5 rounded bg-white/10" />
-        <div className="h-3 w-3/4 rounded bg-white/10" />
-        <div className="h-3 w-2/3 rounded bg-white/10" />
-      </div>
+      {ok ? (
+        <p className="text-body-sm text-ink leading-relaxed">{result.text}</p>
+      ) : (
+        <div className="flex items-center gap-2 text-body-sm text-ink-muted italic">
+          <AlertTriangle size={14} className="text-yellow-500 shrink-0" />
+          Agent unavailable — {result.status === "timeout" ? "response timed out" : "provider error"}
+        </div>
+      )}
     </div>
   );
 }
 
 function SynthesisPanel({ synthesis }: { synthesis: DebateSynthesis }) {
   return (
-    <div className="rounded-2xl border border-indigo-500/20 bg-gradient-to-br from-indigo-950/40 to-purple-950/30 p-6 space-y-5 animate-slide-up shadow-lg shadow-indigo-500/5">
-      <div className="flex items-center gap-2">
-        <Scale size={16} className="text-indigo-400" />
-        <h3 className="text-sm font-bold text-white">AI Synthesis</h3>
-        <span className="ml-auto text-xs text-white/30 font-mono">Groq · Llama 3.1 8B</span>
-      </div>
-
-      {/* Consensus quote */}
-      <div className="border-l-2 border-indigo-500/50 pl-4">
-        <p className="text-sm text-white/80 italic leading-relaxed">&ldquo;{synthesis.consensus}&rdquo;</p>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-green-950/30 border border-green-500/20 rounded-xl p-4">
-          <p className="text-xs font-semibold text-green-400 mb-2 flex items-center gap-1.5"><CheckCircle size={12} /> Agreements</p>
+    <div className="rounded-2xl border border-hairline bg-surface-1 p-md space-y-sm animate-slide-up">
+      <h3 className="text-body-sm font-semibold text-ink flex items-center gap-2">
+        <CheckCircle size={15} className="text-semantic-success" /> Consensus Analysis
+        <span className="ml-auto text-caption text-ink-muted font-normal font-mono">Groq Llama 3.1 8B</span>
+      </h3>
+      <p className="text-body-sm text-ink italic border-l-2 border-accent-blue pl-3 leading-relaxed">
+        &ldquo;{synthesis.consensus}&rdquo;
+      </p>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-sm text-caption">
+        <div className="bg-green-50 border border-green-100 rounded-xl p-sm">
+          <p className="text-green-700 font-semibold mb-1.5 flex items-center gap-1"><CheckCircle size={11} /> Agreements</p>
           <ul className="space-y-1.5">
-            {synthesis.agreements.map((a, i) => (
-              <li key={i} className="text-xs text-white/60 leading-relaxed flex items-start gap-1.5">
-                <span className="mt-0.5 text-green-500/60">•</span>{a}
-              </li>
-            ))}
+            {synthesis.agreements.map((a, i) => <li key={i} className="text-ink-muted leading-relaxed">• {a}</li>)}
           </ul>
         </div>
-        <div className="bg-red-950/30 border border-red-500/20 rounded-xl p-4">
-          <p className="text-xs font-semibold text-red-400 mb-2 flex items-center gap-1.5"><XCircle size={12} /> Contradictions</p>
+        <div className="bg-red-50 border border-red-100 rounded-xl p-sm">
+          <p className="text-red-600 font-semibold mb-1.5 flex items-center gap-1"><XCircle size={11} /> Contradictions</p>
           <ul className="space-y-1.5">
-            {synthesis.contradictions.map((c, i) => (
-              <li key={i} className="text-xs text-white/60 leading-relaxed flex items-start gap-1.5">
-                <span className="mt-0.5 text-red-500/60">•</span>{c}
-              </li>
-            ))}
+            {synthesis.contradictions.map((c, i) => <li key={i} className="text-ink-muted leading-relaxed">• {c}</li>)}
           </ul>
         </div>
-        <div className="bg-amber-950/30 border border-amber-500/20 rounded-xl p-4">
-          <p className="text-xs font-semibold text-amber-400 mb-2 flex items-center gap-1.5"><HelpCircle size={12} /> Missing Angles</p>
+        <div className="bg-amber-50 border border-amber-100 rounded-xl p-sm">
+          <p className="text-amber-600 font-semibold mb-1.5 flex items-center gap-1"><HelpCircle size={11} /> Missing Angles</p>
           <ul className="space-y-1.5">
-            {synthesis.missingPerspectives.map((m, i) => (
-              <li key={i} className="text-xs text-white/60 leading-relaxed flex items-start gap-1.5">
-                <span className="mt-0.5 text-amber-500/60">•</span>{m}
-              </li>
-            ))}
+            {synthesis.missingPerspectives.map((m, i) => <li key={i} className="text-ink-muted leading-relaxed">• {m}</li>)}
           </ul>
         </div>
       </div>
@@ -199,22 +202,18 @@ function SynthesisPanel({ synthesis }: { synthesis: DebateSynthesis }) {
 function FactCheckPanel({ checks }: { checks: FactCheck[] }) {
   if (!checks.length) return null;
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 space-y-3 animate-slide-up">
-      <h3 className="text-sm font-bold text-white flex items-center gap-2">
-        <CheckCircle size={14} className="text-emerald-400" /> Fact Checks
-      </h3>
+    <div className="rounded-2xl border border-hairline bg-surface-1 p-md space-y-sm animate-slide-up">
+      <h3 className="text-body-sm font-semibold text-ink">Fact Checks</h3>
       <div className="space-y-2">
         {checks.map((fc, i) => (
-          <div key={i} className="flex items-start gap-2.5 p-3 rounded-xl bg-white/[0.04] border border-white/5">
+          <div key={i} className="flex items-start gap-2 text-caption p-2 rounded-xl bg-surface-2">
             <span className="mt-0.5 shrink-0">
-              {fc.verified === true
-                ? <CheckCircle size={13} className="text-emerald-400" />
-                : fc.verified === false
-                ? <XCircle size={13} className="text-red-400" />
-                : <HelpCircle size={13} className="text-white/30" />}
+              {fc.verified === true ? <CheckCircle size={12} className="text-semantic-success" />
+               : fc.verified === false ? <XCircle size={12} className="text-red-500" />
+               : <HelpCircle size={12} className="text-ink-muted" />}
             </span>
-            <span className="text-xs text-white/60 leading-relaxed flex-1">{fc.claim}</span>
-            {fc.source && <span className="shrink-0 text-xs text-white/25 italic">{fc.source}</span>}
+            <span className="text-ink-muted leading-relaxed flex-1">{fc.claim}</span>
+            {fc.source && <span className="shrink-0 text-ink-muted italic">{fc.source}</span>}
           </div>
         ))}
       </div>
@@ -223,25 +222,25 @@ function FactCheckPanel({ checks }: { checks: FactCheck[] }) {
 }
 
 const FOLLOW_UP_COLORS: Record<FollowUpQuestion["category"], string> = {
-  "Deeper Dive":           "bg-indigo-500/20 text-indigo-300 border-indigo-500/30",
-  "Related Topic":         "bg-purple-500/20 text-purple-300 border-purple-500/30",
-  "Practical Application": "bg-teal-500/20  text-teal-300  border-teal-500/30",
+  "Deeper Dive":           "bg-indigo-50 text-indigo-700 border-indigo-200",
+  "Related Topic":         "bg-purple-50 text-purple-700 border-purple-200",
+  "Practical Application": "bg-teal-50 text-teal-700 border-teal-200",
 };
 
 function FollowUpPanel({ questions, onSelect }: { questions: FollowUpQuestion[]; onSelect: (q: string) => void }) {
   if (!questions.length) return null;
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 space-y-3 animate-slide-up">
-      <h3 className="text-sm font-bold text-white flex items-center gap-2">
-        <Lightbulb size={14} className="text-yellow-400" /> Explore Further
+    <div className="rounded-2xl border border-hairline bg-surface-1 p-md space-y-sm animate-slide-up">
+      <h3 className="text-body-sm font-semibold text-ink flex items-center gap-2">
+        <Lightbulb size={14} className="text-yellow-500" /> Explore Further
       </h3>
       <div className="space-y-2">
         {questions.map((q, i) => (
           <button key={i} onClick={() => onSelect(q.question)}
-            className="w-full text-left flex items-start gap-3 p-3 rounded-xl bg-white/[0.04] border border-white/5 hover:border-indigo-500/40 hover:bg-indigo-500/5 transition-all group">
-            <span className={`mt-0.5 shrink-0 text-xs px-2 py-0.5 rounded-full border ${FOLLOW_UP_COLORS[q.category]}`}>{q.category}</span>
-            <span className="text-xs text-white/55 group-hover:text-white/85 transition-colors leading-relaxed">{q.question}</span>
-            <ArrowRight size={13} className="shrink-0 mt-0.5 ml-auto text-white/20 group-hover:text-indigo-400 transition-colors" />
+            className="w-full text-left flex items-start gap-3 p-3 rounded-xl bg-surface-2 hover:bg-surface-1 border border-hairline hover:border-accent-blue transition-all group">
+            <span className={`mt-0.5 shrink-0 text-caption px-2 py-0.5 rounded-full border ${FOLLOW_UP_COLORS[q.category]}`}>{q.category}</span>
+            <span className="text-body-sm text-ink-muted group-hover:text-ink transition-colors">{q.question}</span>
+            <ArrowRight size={13} className="shrink-0 mt-0.5 ml-auto text-ink-muted group-hover:text-accent-blue transition-colors" />
           </button>
         ))}
       </div>
@@ -249,7 +248,6 @@ function FollowUpPanel({ questions, onSelect }: { questions: FollowUpQuestion[];
   );
 }
 
-const AGENT_ORDER: AgentName[] = ["professor", "activist", "journalist", "citizen"];
 const EXAMPLE_TOPICS = [
   "Should AI replace human judges in criminal courts?",
   "Is universal basic income viable for developing nations?",
@@ -278,12 +276,15 @@ export default function DebatePage() {
   if (!mounted) {
     return (
       <AppShell subtitle="Policy Simulator">
-        <div className="min-h-screen bg-gradient-to-b from-gray-950 to-gray-900 px-6 py-16 space-y-10">
-          <div className="max-w-2xl mx-auto space-y-4 text-center">
-            <div className="h-10 w-64 mx-auto rounded-2xl bg-white/5 animate-pulse" />
-            <div className="h-4 w-96 mx-auto rounded bg-white/5 animate-pulse" />
+        <div className="max-w-7xl mx-auto px-6 py-[42px] space-y-[42px]">
+          <div className="max-w-2xl mx-auto space-y-3 text-center">
+            <div className="h-8 w-48 bg-surface-2 rounded-xl mx-auto animate-pulse" />
+            <div className="h-4 w-80 bg-surface-2 rounded mx-auto animate-pulse" />
           </div>
-          <div className="max-w-2xl mx-auto h-14 rounded-2xl bg-white/5 animate-pulse" />
+          <div className="max-w-2xl mx-auto h-12 bg-surface-2 rounded-2xl animate-pulse" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-sm">
+            {[1,2,3,4].map((i) => <div key={i} className="h-32 bg-surface-1 border border-hairline rounded-2xl animate-pulse" />)}
+          </div>
         </div>
       </AppShell>
     );
@@ -308,158 +309,167 @@ export default function DebatePage() {
   }
 
   const examples = electionMode ? ELECTION_TOPICS : EXAMPLE_TOPICS;
+  const showPersonas = !loading && !result;
 
   return (
     <AppShell subtitle={electionMode ? "Election Mode" : "Policy Simulator"}>
-      {/* Dark background for the whole page */}
-      <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-950 to-gray-900">
-        {/* Hero section */}
-        <div className="relative overflow-hidden">
-          {/* Background glow blobs */}
-          <div className="absolute top-0 left-1/4 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute top-0 right-1/4 w-80 h-80 bg-purple-600/8 rounded-full blur-3xl pointer-events-none" />
+      <div className="max-w-7xl mx-auto px-6 py-[42px] space-y-[42px]">
 
-          <div className="relative max-w-4xl mx-auto px-6 pt-16 pb-12 text-center space-y-6">
-            {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-medium">
-              <Sparkles size={12} />
-              {electionMode ? "Civic Intelligence" : "Multi-Model AI Debate"}
-            </div>
-
-            <h1 className="text-4xl md:text-5xl font-bold text-white tracking-tight">
-              {electionMode ? "Civic Planner" : "Policy Simulator"}
-            </h1>
-            <p className="text-base text-white/50 max-w-xl mx-auto leading-relaxed">
-              {electionMode
-                ? "Ask Indian election experts — 4 AI agents give parallel civic perspectives."
-                : "4 AI personas debate in parallel. We synthesise, fact-check, and surface what to explore next."}
-            </p>
-
-            {/* Mode toggle */}
-            <div className="flex justify-center">
-              <button
-                onClick={() => { setElectionMode((v) => !v); setResult(null); setError(null); setTopic(""); }}
-                className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium border transition-all ${
-                  electionMode
-                    ? "bg-orange-500/15 text-orange-300 border-orange-500/30 hover:bg-orange-500/20"
-                    : "bg-white/5 text-white/50 border-white/10 hover:border-white/20 hover:text-white/70"
-                }`}
-              >
-                <span className={`w-2.5 h-2.5 rounded-full transition-all ${electionMode ? "bg-orange-400" : "bg-white/20"}`} />
-                🗳️ Election Mode
-              </button>
-            </div>
-          </div>
+        {/* Page header */}
+        <div className="max-w-2xl mx-auto text-center space-y-3">
+          <h1 className="text-headline font-semibold text-ink">
+            {electionMode ? "Civic Planner" : "Policy Simulator"}
+          </h1>
+          <p className="text-body-sm text-ink-muted">
+            {electionMode
+              ? "Ask Indian election experts — 4 AI agents give parallel civic perspectives."
+              : "4 AI personas debate any topic in parallel, then synthesise, fact-check, and suggest what to explore next."}
+          </p>
+          <button
+            onClick={() => { setElectionMode((v) => !v); setResult(null); setError(null); setTopic(""); }}
+            className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-caption font-medium border transition-all ${
+              electionMode
+                ? "bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100"
+                : "bg-surface-1 text-ink-muted border-hairline hover:border-accent-blue hover:text-ink"
+            }`}
+          >
+            <span className={`w-2.5 h-2.5 rounded-full ${electionMode ? "bg-orange-500" : "bg-surface-2 border border-hairline"}`} />
+            🗳️ Election Mode
+          </button>
         </div>
 
-        {/* Input */}
-        <div className="max-w-2xl mx-auto px-6 pb-10 space-y-4">
-          <div className="flex gap-2">
+        {/* Input bar */}
+        <div className="max-w-2xl mx-auto space-y-sm">
+          <div className="flex gap-3">
             <input value={topic} onChange={(e) => setTopic(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") void handleDebate(); }}
               placeholder={electionMode ? "Ask about voting, elections, schemes…" : "Enter a policy topic to debate…"}
-              className="flex-1 bg-white/5 border border-white/10 rounded-2xl px-5 py-3.5 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/40 transition-all" />
+              className="flex-1 bg-surface-1 border border-hairline rounded-2xl px-md py-sm text-body text-ink placeholder-ink-muted focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-accent-blue transition-all" />
             <button onClick={() => void handleDebate()} disabled={loading || !topic.trim()}
-              className="px-6 py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white font-semibold text-sm transition-all flex items-center gap-2 whitespace-nowrap">
-              {loading ? <><Spinner /> Debating…</> : <>Simulate <ArrowRight size={14} /></>}
+              className="px-md py-sm rounded-2xl bg-primary hover:opacity-90 disabled:opacity-40 text-on-primary font-semibold text-body-sm transition-all flex items-center gap-2 whitespace-nowrap">
+              {loading ? <><Spinner /> Debating…</> : <><Play size={13} /> Simulate</>}
             </button>
           </div>
 
-          {/* Election extras */}
+          {/* Election mode extras */}
           {electionMode && (
-            <div className="flex flex-wrap items-center gap-3 px-1">
+            <div className="flex flex-wrap items-center gap-3">
               <select value={stateVal} onChange={(e) => setStateVal(e.target.value)}
-                className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-xs text-white/70 focus:outline-none focus:border-indigo-500/40 transition-all">
+                className="bg-surface-1 border border-hairline rounded-xl px-sm py-1.5 text-caption text-ink focus:outline-none focus:border-accent-blue transition-all">
                 <option value="">All India</option>
                 {["Maharashtra","Delhi","Uttar Pradesh","Tamil Nadu","West Bengal","Karnataka","Gujarat","Rajasthan","Bihar","Andhra Pradesh"].map((s) => (
                   <option key={s} value={s}>{s}</option>
                 ))}
               </select>
-              <label className="flex items-center gap-2 text-xs text-white/50 cursor-pointer select-none">
+              <label className="flex items-center gap-2 text-caption text-ink-muted cursor-pointer select-none">
                 <input type="checkbox" checked={firstTimeVoter} onChange={(e) => setFTV(e.target.checked)}
-                  className="w-4 h-4 accent-indigo-500 rounded" />
+                  className="w-4 h-4 accent-accent-blue rounded" />
                 First-time voter
               </label>
             </div>
           )}
 
-          {/* Example chips */}
-          {!result && !loading && (
-            <div className="flex flex-wrap gap-2 justify-center pt-1">
-              {examples.map((t) => (
-                <button key={t} onClick={() => void handleDebate(t)}
-                  className="text-xs px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-white/40 hover:text-white/70 hover:border-white/20 transition-all">
-                  {t.length > 55 ? t.slice(0, 55) + "…" : t}
-                </button>
-              ))}
-            </div>
-          )}
+          {/* Example topic chips */}
+          <div className="flex flex-wrap gap-2 justify-center">
+            {examples.map((t) => (
+              <button key={t} onClick={() => void handleDebate(t)}
+                disabled={loading}
+                className="text-caption px-3 py-1.5 rounded-full bg-surface-1 border border-hairline text-ink-muted hover:text-ink hover:border-accent-blue disabled:opacity-40 transition-all">
+                {t.length > 55 ? t.slice(0, 55) + "…" : t}
+              </button>
+            ))}
+          </div>
         </div>
 
-        {/* Content area */}
-        <div className="max-w-6xl mx-auto px-6 pb-20 space-y-6">
-          {/* Error */}
-          {error && (
-            <div className="max-w-2xl mx-auto bg-red-500/10 border border-red-500/25 rounded-2xl p-4 text-sm text-red-300 flex items-center gap-2 animate-slide-up">
-              <AlertTriangle size={15} /> {error}
-            </div>
-          )}
+        {/* Error */}
+        {error && (
+          <div className="max-w-2xl mx-auto bg-red-50 border border-red-200 rounded-2xl p-sm text-body-sm text-red-700 flex items-center gap-2 animate-slide-up">
+            <AlertTriangle size={14} /> {error}
+          </div>
+        )}
 
-          {/* Loading — agent skeletons */}
-          {loading && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {AGENT_ORDER.map((a) => <AgentCardSkeleton key={a} agent={a} />)}
-              </div>
-              <div className="rounded-2xl border border-white/8 bg-white/[0.025] p-4 flex items-center gap-3 text-sm text-white/40">
-                <Spinner /> Running synthesis pipeline (Groq · Gemini · Cerebras)…
-              </div>
+        {/* Agent personas — shown before any debate runs */}
+        {showPersonas && (
+          <div className="space-y-sm">
+            <div className="flex items-center justify-between">
+              <p className="text-caption font-semibold text-ink-muted uppercase tracking-widest">Meet the Agents</p>
+              <span className="text-caption text-ink-muted">All 4 debate in parallel</span>
             </div>
-          )}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-sm">
+              {AGENT_ORDER.map((a) => <AgentPersonaCard key={a} agent={a} />)}
+            </div>
 
-          {/* Results */}
-          {result && !loading && (
-            <div className="space-y-6 animate-slide-up">
-              {/* Meta bar */}
-              <div className="flex items-center justify-between flex-wrap gap-3 px-1">
-                <div>
-                  <p className="text-xs text-white/35 mb-0.5">Topic</p>
-                  <p className="text-sm font-medium text-white/80">{result.topic}</p>
+            {/* How it works */}
+            <div className="rounded-2xl border border-hairline bg-surface-1 p-md">
+              <p className="text-caption font-semibold text-ink-muted uppercase tracking-widest mb-sm">How it works</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-sm text-caption">
+                <div className="flex flex-col gap-1.5">
+                  <span className="w-6 h-6 rounded-lg bg-surface-2 border border-hairline flex items-center justify-center text-ink-muted font-mono text-xs">1</span>
+                  <p className="font-medium text-ink">Enter a topic</p>
+                  <p className="text-ink-muted leading-relaxed">Any policy question, civic issue, or election topic you want explored from multiple angles.</p>
                 </div>
-                <div className="flex flex-wrap items-center gap-4 text-xs text-white/35">
-                  <span className="flex items-center gap-1.5"><Zap size={11} className="text-yellow-400" /> <span className="text-white/55">Fastest:</span> {result.modelPerformance.fastestProvider}</span>
-                  <span className="flex items-center gap-1.5"><Timer size={11} /> Avg: {result.modelPerformance.avgLatencyMs}ms</span>
-                  <span>
-                    <span className="text-emerald-400 font-semibold">{result.modelPerformance.successCount}</span>
-                    <span className="mx-1">/</span>
-                    <span className="text-red-400 font-semibold">{result.modelPerformance.failureCount}</span>
-                    <span className="ml-1">agents</span>
-                  </span>
+                <div className="flex flex-col gap-1.5">
+                  <span className="w-6 h-6 rounded-lg bg-surface-2 border border-hairline flex items-center justify-center text-ink-muted font-mono text-xs">2</span>
+                  <p className="font-medium text-ink">4 agents respond</p>
+                  <p className="text-ink-muted leading-relaxed">Professor, Activist, Journalist, and Citizen each respond in parallel using different AI models.</p>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <span className="w-6 h-6 rounded-lg bg-surface-2 border border-hairline flex items-center justify-center text-ink-muted font-mono text-xs">3</span>
+                  <p className="font-medium text-ink">Synthesis + fact-check</p>
+                  <p className="text-ink-muted leading-relaxed">A fifth model synthesises agreements, contradictions, and suggests follow-up questions.</p>
                 </div>
               </div>
-
-              {/* Agent grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {AGENT_ORDER.map((agent) => {
-                  const r = result.agents.find((a) => a.agent === agent);
-                  return r ? <AgentCard key={agent} result={r} /> : null;
-                })}
-              </div>
-
-              {/* Synthesis */}
-              <SynthesisPanel synthesis={result.synthesis} />
-
-              {/* Fact-check + Follow-up */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <FactCheckPanel checks={result.factChecks} />
-                <FollowUpPanel questions={result.followUpQuestions} onSelect={(q) => { setTopic(q); void handleDebate(q); }} />
-              </div>
-
-              {/* Footer ID */}
-              <p className="text-center text-xs text-white/20 font-mono pt-2">debate/{result.debateId}</p>
             </div>
-          )}
-        </div>
+          </div>
+        )}
+
+        {/* Loading — agent skeletons */}
+        {loading && (
+          <div className="space-y-sm">
+            <p className="text-caption text-ink-muted">Running 4 agents in parallel…</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-sm">
+              {AGENT_ORDER.map((a) => <AgentLoadingCard key={a} agent={a} />)}
+            </div>
+            <div className="rounded-2xl border border-hairline bg-surface-1 p-sm flex items-center gap-3 text-body-sm text-ink-muted">
+              <Spinner /> Running synthesis pipeline (Groq · Gemini · Cerebras)…
+            </div>
+          </div>
+        )}
+
+        {/* Results */}
+        {result && !loading && (
+          <div className="space-y-sm animate-slide-up">
+            {/* Meta bar */}
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div>
+                <p className="text-caption text-ink-muted mb-0.5">Topic</p>
+                <p className="text-body-sm font-medium text-ink">{result.topic}</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-4 text-caption text-ink-muted">
+                <span className="flex items-center gap-1"><Zap size={11} /> Fastest: <strong className="text-ink">{result.modelPerformance.fastestProvider}</strong></span>
+                <span className="flex items-center gap-1"><Timer size={11} /> Avg: <strong className="text-ink">{result.modelPerformance.avgLatencyMs}ms</strong></span>
+                <span><strong className="text-semantic-success">{result.modelPerformance.successCount}</strong> / <strong className="text-red-500">{result.modelPerformance.failureCount}</strong> agents</span>
+              </div>
+            </div>
+
+            {/* Agent response cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-sm">
+              {AGENT_ORDER.map((agent) => {
+                const r = result.agents.find((a) => a.agent === agent);
+                return r ? <AgentResultCard key={agent} result={r} /> : null;
+              })}
+            </div>
+
+            <SynthesisPanel synthesis={result.synthesis} />
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-sm">
+              <FactCheckPanel checks={result.factChecks} />
+              <FollowUpPanel questions={result.followUpQuestions} onSelect={(q) => { setTopic(q); void handleDebate(q); }} />
+            </div>
+
+            <p className="text-center text-caption text-ink-muted font-mono">debate/{result.debateId}</p>
+          </div>
+        )}
       </div>
     </AppShell>
   );
