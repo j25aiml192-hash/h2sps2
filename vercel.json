@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/news/cron",
-      "schedule": "0 */6 * * *"
+      "schedule": "30 0 * * *"
     }
   ],
   "env": {
