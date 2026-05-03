@@ -5,7 +5,7 @@ import { AppShell } from "@/components/AppShell";
 import {
   Mic, MicOff, Square, Volume2, RotateCcw,
   GraduationCap, Siren, Newspaper, Home,
-  CheckCircle, Globe, Zap,
+  CheckCircle, Globe, Zap, Pause, Play,
 } from "lucide-react";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { useTextToSpeech } from "@/hooks/useTextToSpeech";
@@ -93,6 +93,7 @@ export default function VoicePage() {
 
   const stt = useSpeechRecognition({ lang: "en-IN", onFinalTranscript });
   const tts = useTextToSpeech({ rate: 0.95, onEnd: () => setPlayingAgent(null) });
+  const { togglePause, isPaused } = tts;
 
   function startListening() { setPhase("listening"); setTopic(""); setDebate(null); setError(null); stt.start(); }
   function cancelListening() { stt.stop(); stt.reset(); setPhase("idle"); }
@@ -183,10 +184,16 @@ export default function VoicePage() {
             </button>
           )}
           {phase === "reading" && (
-            <button onClick={stopPlayback}
-              className="px-md py-sm rounded-2xl bg-surface-1 hover:bg-surface-2 text-ink border border-hairline text-body-sm transition-all flex items-center gap-2">
-              <Square size={14} /> Stop Reading
-            </button>
+            <div className="flex items-center gap-2">
+              <button onClick={tts.togglePause}
+                className="px-md py-sm rounded-2xl bg-surface-1 hover:bg-surface-2 text-ink border border-hairline text-body-sm transition-all flex items-center gap-2">
+                {tts.isPaused ? <><Play size={14} /> Resume</> : <><Pause size={14} /> Pause</>}
+              </button>
+              <button onClick={stopPlayback}
+                className="px-md py-sm rounded-2xl bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 text-body-sm transition-all flex items-center gap-2">
+                <Square size={14} /> Stop
+              </button>
+            </div>
           )}
           {stt.interim && <p className="text-ink-muted text-body-sm italic max-w-sm text-center">{stt.interim}</p>}
         </div>

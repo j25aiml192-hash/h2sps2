@@ -39,6 +39,73 @@ function Spinner() {
   );
 }
 
+// ── Markdown renderer ─────────────────────────────────────────
+// Converts LLM markdown output into readable structured JSX
+function MarkdownMessage({ content }: { content: string }) {
+  const lines = content.split("\n");
+  const elements: React.ReactNode[] = [];
+  let i = 0;
+
+  const renderInline = (text: string): React.ReactNode => {
+    // Split on **bold** markers
+    const parts = text.split(/(\*\*[^*]+\*\*)/g);
+    return parts.map((part, idx) =>
+      part.startsWith("**") && part.endsWith("**")
+        ? <strong key={idx} className="font-semibold text-ink">{part.slice(2, -2)}</strong>
+        : <span key={idx}>{part}</span>
+    );
+  };
+
+  while (i < lines.length) {
+    const line = lines[i].trimEnd();
+
+    // Empty line → spacer
+    if (!line.trim()) { elements.push(<div key={i} className="h-1" />); i++; continue; }
+
+    // H3 ### or H2 ##
+    if (line.startsWith("### ")) {
+      elements.push(<p key={i} className="font-semibold text-ink mt-2 mb-0.5">{renderInline(line.slice(4))}</p>); i++; continue;
+    }
+    if (line.startsWith("## ")) {
+      elements.push(<p key={i} className="font-bold text-ink mt-3 mb-1">{renderInline(line.slice(3))}</p>); i++; continue;
+    }
+
+    // Numbered list: "1. " or "1) "
+    const numMatch = line.match(/^(\d+)[.)\s]\s+(.*)/);
+    if (numMatch) {
+      const items: React.ReactNode[] = [];
+      while (i < lines.length) {
+        const l = lines[i].trimEnd();
+        const m = l.match(/^(\d+)[.)\s]\s+(.*)/);
+        if (!m) break;
+        items.push(<li key={i} className="flex gap-2"><span className="shrink-0 w-5 h-5 rounded-full bg-accent-blue/10 text-accent-blue text-caption font-bold flex items-center justify-center mt-0.5">{m[1]}</span><span>{renderInline(m[2])}</span></li>);
+        i++;
+      }
+      elements.push(<ul key={`num-${i}`} className="space-y-1.5 my-1">{items}</ul>);
+      continue;
+    }
+
+    // Bullet list: "- " or "• "
+    if (line.match(/^[-•*]\s/)) {
+      const items: React.ReactNode[] = [];
+      while (i < lines.length) {
+        const l = lines[i].trimEnd();
+        if (!l.match(/^[-•*]\s/)) break;
+        items.push(<li key={i} className="flex gap-2"><span className="shrink-0 mt-1.5 w-1.5 h-1.5 rounded-full bg-accent-blue" /><span>{renderInline(l.slice(2))}</span></li>);
+        i++;
+      }
+      elements.push(<ul key={`bul-${i}`} className="space-y-1.5 my-1">{items}</ul>);
+      continue;
+    }
+
+    // Normal paragraph
+    elements.push(<p key={i} className="leading-relaxed">{renderInline(line)}</p>);
+    i++;
+  }
+
+  return <div className="space-y-1 text-body-sm">{elements}</div>;
+}
+
 export default function HomePage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput]       = useState("");
@@ -52,8 +119,10 @@ export default function HomePage() {
 
   const handleVoiceTranscript = useCallback((text: string) => {
     setVoiceListening(false);
-    submitRef.current(text);
+    // Fill textarea for review — user can edit before sending
+    setInput(text);
   }, []);
+
 
   useEffect(() => {
     setMounted(true);
@@ -275,7 +344,10 @@ export default function HomePage() {
                       ? "bg-primary text-on-primary rounded-tr-sm"
                       : "bg-surface-1 text-ink border border-hairline rounded-tl-sm"
                   }`}>
-                    {msg.content}
+                    {msg.role === "assistant"
+                      ? <MarkdownMessage content={msg.content} />
+                      : msg.content
+                    }
                   </div>
                   {/* Meta row */}
                   <div className={`flex items-center gap-2 mt-1 px-1 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}>

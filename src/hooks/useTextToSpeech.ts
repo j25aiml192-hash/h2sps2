@@ -51,6 +51,7 @@ export function useTextToSpeech(options: UseTextToSpeechOptions = {}) {
   const { lang = "en-IN", rate = 1.0, pitch = 1.0, volume = 1.0, onEnd, onError } = options;
 
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isPaused, setIsPaused]     = useState(false);
   const [provider, setProvider]     = useState<TTSProvider | null>(null);
   const [queue, setQueue]           = useState<string[]>([]);
 
@@ -160,7 +161,31 @@ export function useTextToSpeech(options: UseTextToSpeechOptions = {}) {
     audioRef.current?.pause();
     audioRef.current = null;
     setIsSpeaking(false);
+    setIsPaused(false);
     setQueue([]);
+  }, []);
+
+  const togglePause = useCallback(() => {
+    // Web Speech API
+    if (typeof window !== "undefined" && window.speechSynthesis) {
+      if (window.speechSynthesis.speaking) {
+        if (window.speechSynthesis.paused) {
+          window.speechSynthesis.resume();
+          setIsPaused(false);
+          return;
+        } else {
+          window.speechSynthesis.pause();
+          setIsPaused(true);
+          return;
+        }
+      }
+    }
+    // HTML Audio element
+    const audio = audioRef.current;
+    if (audio) {
+      if (audio.paused) { void audio.play(); setIsPaused(false); }
+      else              { audio.pause();      setIsPaused(true);  }
+    }
   }, []);
 
   // ── Queue: speak multiple texts sequentially ─────────────────
@@ -181,7 +206,9 @@ export function useTextToSpeech(options: UseTextToSpeechOptions = {}) {
     speak,
     speakQueue,
     stop,
+    togglePause,
     isSpeaking,
+    isPaused,
     provider,
     queue,
     hasWebTTS,
