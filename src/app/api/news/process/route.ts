@@ -71,9 +71,10 @@ async function runPipeline(
     const ref = firestoreDB
       .collection(ARTICLES_COLLECTION)
       .doc(article.articleId);
+    // Firestore rejects `undefined` values — coerce optional fields to null
     batch.set(ref, {
       ...article,
-      // Ensure nested objects are plain JSON for Firestore
+      imageUrl: article.imageUrl ?? null,
       scheme:   { ...article.scheme, data: article.scheme.data ?? null },
       regional: { ...article.regional },
     });

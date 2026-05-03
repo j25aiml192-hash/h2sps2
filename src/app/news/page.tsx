@@ -151,9 +151,87 @@ function ArticleCard({ article, debateLink, onViewDebate, onTriggerDebate }: {
   );
 }
 
+const PIPELINE_STEPS = [
+  { label: "Fetching articles",   model: "NewsAPI + RSS",    icon: "①" },
+  { label: "Summarising",         model: "gemini-flash",     icon: "②" },
+  { label: "Classifying",         model: "llama-8b",         icon: "③" },
+  { label: "Scoring relevance",   model: "llama-8b",         icon: "④" },
+  { label: "Extracting schemes",  model: "llama-70b",        icon: "⑤" },
+  { label: "Tagging regions",     model: "gemini-flash",     icon: "⑥" },
+];
+
+function PipelineProgressUI({ step }: { step: number }) {
+  return (
+    <div className="flex-1 space-y-md">
+      {/* Animated header */}
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 px-md py-sm rounded-2xl bg-primary/10 border border-primary/20">
+          <Spinner />
+          <span className="text-body-sm font-semibold text-ink">Pipeline running…</span>
+        </div>
+        <span className="text-caption text-ink-muted">Auto-started on page load</span>
+      </div>
+
+      {/* Step tracker */}
+      <div className="rounded-2xl border border-hairline bg-surface-1 overflow-hidden">
+        <div className="px-md py-sm border-b border-hairline">
+          <p className="text-caption font-semibold text-ink-muted uppercase tracking-widest">5-Step AI Pipeline</p>
+        </div>
+        <div className="divide-y divide-hairline">
+          {PIPELINE_STEPS.map((s, i) => {
+            const done    = i < step;
+            const active  = i === step;
+            const pending = i > step;
+            return (
+              <div key={i} className={`flex items-center gap-3 px-md py-3 transition-colors ${active ? "bg-primary/5" : ""}`}>
+                <span className={`text-body-sm w-5 ${done ? "text-green-600" : active ? "text-primary" : "text-ink-muted"}`}>
+                  {done ? <CheckCircle size={16} className="text-green-500" /> : active ? <Spinner /> : <span className="text-caption text-ink-muted">{s.icon}</span>}
+                </span>
+                <span className={`flex-1 text-body-sm ${active ? "text-ink font-medium" : done ? "text-ink" : "text-ink-muted"}`}>{s.label}</span>
+                <span className={`text-caption font-mono px-1.5 py-0.5 rounded border ${
+                  done ? "bg-green-50 text-green-700 border-green-200" :
+                  active ? "bg-primary/10 text-primary border-primary/20" :
+                  "bg-surface-2 text-ink-muted border-hairline"
+                }`}>{s.model}</span>
+                {pending && <span className="w-2 h-2 rounded-full bg-surface-2 border border-hairline" />}
+              </div>
+            );
+          })}
+        </div>
+        {/* Progress bar */}
+        <div className="h-1 bg-surface-2">
+          <div
+            className="h-full bg-primary transition-all duration-700 ease-out"
+            style={{ width: `${Math.round((step / PIPELINE_STEPS.length) * 100)}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Article skeleton cards */}
+      <div className="space-y-sm">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="rounded-2xl border border-hairline bg-surface-1 p-md space-y-3 animate-pulse">
+            <div className="flex gap-2">
+              <div className="h-5 w-20 rounded-full bg-surface-2" />
+              <div className="h-5 w-16 rounded-full bg-surface-2 ml-auto" />
+            </div>
+            <div className="space-y-2">
+              <div className="h-4 w-full rounded bg-surface-2" />
+              <div className="h-4 w-4/5 rounded bg-surface-2" />
+            </div>
+            <div className="h-3 w-3/4 rounded bg-surface-2" />
+            <div className="h-1.5 w-full rounded-full bg-surface-2" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function NewsPage() {
   const [mounted, setMounted]    = useState(false);
   const [loading, setLoading]    = useState(false);
+  const [pipelineStep, setPipelineStep] = useState(0);
   const [runResult, setRunResult] = useState<RunSummary | null>(null);
   const [error, setError]        = useState<string | null>(null);
   const [source, setSource]      = useState<"all"|"newsapi"|"rss">("all");
@@ -181,17 +259,24 @@ export default function NewsPage() {
 
   useEffect(() => { if (articles.length > 0) void checkDebateLinks(articles); }, [articles, checkDebateLinks]);
 
-  async function handleRun() {
+  async function handleRun(src = source, lim = limit) {
     if (loading) return;
-    setLoading(true); setError(null); setRunResult(null);
+    setLoading(true); setError(null); setRunResult(null); setPipelineStep(0);
+    // Simulate step progression while the real fetch happens
+    const interval = setInterval(() => {
+      setPipelineStep((s) => Math.min(s + 1, PIPELINE_STEPS.length - 1));
+    }, 1800);
     try {
-      const res  = await fetch("/api/news/process", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ source, limit }) });
+      const res  = await fetch("/api/news/process", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ source: src, limit: lim }) });
       const data = await res.json() as RunSummary & { error?: string };
       if (!res.ok) throw new Error(data.error ?? "Failed");
       setRunResult(data);
     } catch (e) { setError((e as Error).message); }
-    finally { setLoading(false); }
+    finally { clearInterval(interval); setPipelineStep(PIPELINE_STEPS.length); setLoading(false); }
   }
+
+  // Auto-run on first mount
+  useEffect(() => { void handleRun(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleTriggerDebate(articleId: string, title: string) {
     setTriggeringId(articleId);
@@ -212,10 +297,16 @@ export default function NewsPage() {
   if (!mounted) {
     return (
       <AppShell subtitle="Intelligence Feed">
-        <div className="max-w-7xl mx-auto px-6 py-[42px] space-y-[42px]">
-          <div className="h-12 w-72 bg-surface-2 rounded-2xl animate-pulse" />
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-sm">
-            {[1,2,3,4,5,6].map((i) => <div key={i} className="h-48 bg-surface-2 rounded-2xl animate-pulse" />)}
+        <div className="max-w-7xl mx-auto px-6 py-[42px] flex gap-md">
+          <aside className="w-56 shrink-0 hidden lg:block">
+            <div className="space-y-sm">
+              <div className="h-32 rounded-2xl bg-surface-2 animate-pulse" />
+              <div className="h-20 rounded-2xl bg-surface-2 animate-pulse" />
+              <div className="h-40 rounded-2xl bg-surface-2 animate-pulse" />
+            </div>
+          </aside>
+          <div className="flex-1 space-y-sm">
+            {[1,2,3,4].map((i) => <div key={i} className="h-36 bg-surface-2 rounded-2xl animate-pulse" />)}
           </div>
         </div>
       </AppShell>
@@ -319,13 +410,7 @@ export default function NewsPage() {
             </div>
           )}
 
-          {!loading && articles.length === 0 && !error && (
-            <div className="flex flex-col items-center justify-center py-24 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-surface-1 border border-hairline flex items-center justify-center mb-md"><Newspaper size={32} className="text-ink-muted" /></div>
-              <h2 className="text-headline font-semibold text-ink mb-2">Ready to process</h2>
-              <p className="text-body-sm text-ink-muted max-w-sm">Click &ldquo;Run Pipeline&rdquo; to fetch and process news through 5 AI models. Articles scoring &gt;0.8 relevance will automatically queue a Live Debate.</p>
-            </div>
-          )}
+          {loading && <PipelineProgressUI step={pipelineStep} />}
 
           <div className="space-y-sm">
             {filtered.map((article) => (
