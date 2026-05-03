@@ -183,7 +183,4 @@ npx vercel --prod
 Set all env vars in the Vercel dashboard under **Settings → Environment Variables**.
 
 ---
-
-## 👥 Team
-
-Built for **Hack2Skills PS2** hackathon — NitiYantra team.
+Built for **Hack2Skills PS2** hackathon — Hitendra Dhapola.
