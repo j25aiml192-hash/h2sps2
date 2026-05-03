@@ -1,0 +1,13 @@
+{
+  "crons": [
+    {
+      "path": "/api/news/cron",
+      "schedule": "0 */6 * * *"
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  },
+  "regions": ["bom1"],
+  "framework": "nextjs"
+}
