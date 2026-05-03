@@ -93,7 +93,6 @@ export default function VoicePage() {
 
   const stt = useSpeechRecognition({ lang: "en-IN", onFinalTranscript });
   const tts = useTextToSpeech({ rate: 0.95, onEnd: () => setPlayingAgent(null) });
-  const { togglePause, isPaused } = tts;
 
   function startListening() { setPhase("listening"); setTopic(""); setDebate(null); setError(null); stt.start(); }
   function cancelListening() { stt.stop(); stt.reset(); setPhase("idle"); }
