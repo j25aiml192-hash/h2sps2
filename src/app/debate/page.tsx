@@ -171,6 +171,10 @@ export default function DebatePage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult]   = useState<DebateResponse | null>(null);
   const [error, setError]     = useState<string | null>(null);
+  // Election mode extras
+  const [electionMode, setElectionMode] = useState(false);
+  const [stateVal, setStateVal]         = useState("");
+  const [firstTimeVoter, setFTV]        = useState(false);
 
   useEffect(() => setMounted(true), []);
 
@@ -197,7 +201,11 @@ export default function DebatePage() {
     if (topicOverride) setTopic(topicOverride);
     setLoading(true); setResult(null); setError(null);
     try {
-      const res  = await fetch("/api/agents/debate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ topic: finalTopic }) });
+      const endpoint = electionMode ? "/api/election/debate" : "/api/agents/debate";
+      const body = electionMode
+        ? { topic: finalTopic, state: stateVal || undefined, isFirstTimeVoter: firstTimeVoter }
+        : { topic: finalTopic };
+      const res  = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const data = await res.json() as DebateResponse & { error?: string };
       if (!res.ok) throw new Error(data.error ?? "Debate failed");
       setResult(data);
@@ -206,14 +214,35 @@ export default function DebatePage() {
   }
 
   return (
-    <AppShell subtitle="Policy Simulator">
+    <AppShell subtitle={electionMode ? "Election Mode" : "Policy Simulator"}>
       <div className="max-w-7xl mx-auto px-6 py-[42px] space-y-[42px]">
         {/* Hero */}
-        <div className="text-center space-y-2">
-          <h1 className="text-display font-semibold text-ink">Policy Simulator</h1>
+        <div className="text-center space-y-3">
+          <h1 className="text-display font-semibold text-ink">
+            {electionMode ? "Civic Planner" : "Policy Simulator"}
+          </h1>
           <p className="text-body-sm text-ink-muted max-w-xl mx-auto">
-            4 AI agents with distinct personas debate in parallel — then we synthesise, fact-check, and suggest what to explore next.
+            {electionMode
+              ? "Ask Indian election experts — 4 AI agents give parallel civic perspectives."
+              : "4 AI agents with distinct personas debate in parallel — then we synthesise, fact-check, and suggest what to explore next."}
           </p>
+
+          {/* Mode toggle */}
+          <div className="flex justify-center">
+            <button
+              onClick={() => { setElectionMode((v) => !v); setResult(null); setError(null); setTopic(""); }}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-caption font-medium border transition-all ${
+                electionMode
+                  ? "bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100"
+                  : "bg-surface-1 text-ink-muted border-hairline hover:border-accent-blue hover:text-ink"
+              }`}
+            >
+              <span className={`w-3 h-3 rounded-full border-2 transition-all ${
+                electionMode ? "bg-orange-500 border-orange-500" : "bg-canvas border-zinc-300"
+              }`} />
+              🗳️ Election Mode
+            </button>
+          </div>
         </div>
 
         {/* Input */}
@@ -221,7 +250,7 @@ export default function DebatePage() {
           <div className="flex gap-3">
             <input value={topic} onChange={(e) => setTopic(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") void handleDebate(); }}
-              placeholder="Enter a policy topic to debate…"
+              placeholder={electionMode ? "Ask about voting, elections, schemes…" : "Enter a policy topic to debate…"}
               className="flex-1 bg-surface-1 border border-hairline rounded-2xl px-md py-sm text-body text-ink placeholder-ink-muted focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-accent-blue transition-all" />
             <button onClick={() => void handleDebate()} disabled={loading || !topic.trim()}
               className="px-md py-sm rounded-2xl bg-primary hover:opacity-90 disabled:opacity-40 text-on-primary font-semibold text-body-sm transition-all flex items-center gap-2">
@@ -229,9 +258,30 @@ export default function DebatePage() {
             </button>
           </div>
 
+          {/* Election mode extras */}
+          {electionMode && (
+            <div className="flex flex-wrap items-center gap-3 px-1">
+              <select value={stateVal} onChange={(e) => setStateVal(e.target.value)}
+                className="bg-surface-1 border border-hairline rounded-xl px-sm py-1.5 text-caption text-ink focus:outline-none focus:border-accent-blue transition-all">
+                <option value="">All India</option>
+                {["Maharashtra","Delhi","Uttar Pradesh","Tamil Nadu","West Bengal","Karnataka","Gujarat","Rajasthan","Bihar","Andhra Pradesh"].map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+              <label className="flex items-center gap-2 text-caption text-ink-muted cursor-pointer select-none">
+                <input type="checkbox" checked={firstTimeVoter} onChange={(e) => setFTV(e.target.checked)}
+                  className="w-4 h-4 accent-accent-blue rounded" />
+                First-time voter
+              </label>
+            </div>
+          )}
+
           {!result && !loading && (
             <div className="flex flex-wrap gap-2 justify-center">
-              {EXAMPLE_TOPICS.map((t) => (
+              {(electionMode
+                ? ["How do I check my name on the electoral roll?", "What is NOTA and when should I use it?", "Can I vote if I moved to a different city?", "What is the Model Code of Conduct?"]
+                : EXAMPLE_TOPICS
+              ).map((t) => (
                 <button key={t} onClick={() => void handleDebate(t)}
                   className="text-caption px-3 py-1.5 rounded-full bg-surface-1 border border-hairline text-ink-muted hover:text-ink hover:border-accent-blue transition-all">
                   {t.length > 55 ? t.slice(0, 55) + "…" : t}
