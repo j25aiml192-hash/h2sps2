@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import { AppShell } from "@/components/AppShell";
 import {
   GraduationCap, Siren, Newspaper, Home,
-  CheckCircle, XCircle, HelpCircle, Lightbulb, Zap, Timer, BarChart2, AlertTriangle,
+  CheckCircle, XCircle, HelpCircle, Lightbulb, Zap, Timer,
+  AlertTriangle, ArrowRight, Sparkles, Scale,
 } from "lucide-react";
 import type { AgentName } from "@/lib/agent-configs";
 import type { FactCheck, FollowUpQuestion, DebateSynthesis } from "@/lib/debate-types";
@@ -38,81 +39,164 @@ interface DebateResponse {
   totalDurationMs: number;
 }
 
-const AGENT_META: Record<AgentName, { label: string; badge: string; card: string }> = {
-  professor: { label: "Professor", badge: "bg-blue-50 text-blue-700 border-blue-200", card: "border-blue-200 bg-blue-50/40" },
-  activist:  { label: "Activist",  badge: "bg-red-50 text-red-700 border-red-200",   card: "border-red-200 bg-red-50/40"   },
-  journalist:{ label: "Journalist",badge: "bg-amber-50 text-amber-700 border-amber-200", card: "border-amber-200 bg-amber-50/40" },
-  citizen:   { label: "Citizen",   badge: "bg-green-50 text-green-700 border-green-200", card: "border-green-200 bg-green-50/40" },
+const AGENT_META: Record<AgentName, {
+  label: string; title: string; emoji: string;
+  gradient: string; border: string; badge: string; glow: string;
+}> = {
+  professor: {
+    label: "Professor", title: "Elena Vasquez", emoji: "🎓",
+    gradient: "from-blue-950/60 to-blue-900/30",
+    border: "border-blue-500/30", badge: "bg-blue-500/20 text-blue-300 border-blue-400/30",
+    glow: "shadow-blue-500/10",
+  },
+  activist: {
+    label: "Activist", title: "Maya Chen", emoji: "✊",
+    gradient: "from-red-950/60 to-red-900/30",
+    border: "border-red-500/30", badge: "bg-red-500/20 text-red-300 border-red-400/30",
+    glow: "shadow-red-500/10",
+  },
+  journalist: {
+    label: "Journalist", title: "James Okafor", emoji: "📰",
+    gradient: "from-amber-950/60 to-amber-900/30",
+    border: "border-amber-500/30", badge: "bg-amber-500/20 text-amber-300 border-amber-400/30",
+    glow: "shadow-amber-500/10",
+  },
+  citizen: {
+    label: "Citizen", title: "Amit Patil", emoji: "🙋",
+    gradient: "from-emerald-950/60 to-emerald-900/30",
+    border: "border-emerald-500/30", badge: "bg-emerald-500/20 text-emerald-300 border-emerald-400/30",
+    glow: "shadow-emerald-500/10",
+  },
 };
 
-function AgentIcon({ agent }: { agent: AgentName }) {
-  if (agent === "professor")  return <GraduationCap size={16} />;
-  if (agent === "activist")   return <Siren size={16} />;
-  if (agent === "journalist") return <Newspaper size={16} />;
-  return <Home size={16} />;
+function AgentIcon({ agent, size = 18 }: { agent: AgentName; size?: number }) {
+  if (agent === "professor")  return <GraduationCap size={size} />;
+  if (agent === "activist")   return <Siren size={size} />;
+  if (agent === "journalist") return <Newspaper size={size} />;
+  return <Home size={size} />;
 }
 
-
-const FOLLOW_UP_COLORS: Record<FollowUpQuestion["category"], string> = {
-  "Deeper Dive":           "bg-indigo-50 text-indigo-700 border-indigo-200",
-  "Related Topic":         "bg-purple-50 text-purple-700 border-purple-200",
-  "Practical Application": "bg-teal-50  text-teal-700  border-teal-200",
-};
-
 function Spinner() {
-  return <span className="inline-block w-4 h-4 border-2 border-accent-blue border-t-transparent rounded-full animate-spin-slow" />;
+  return <span className="inline-block w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin-slow" />;
 }
 
 function AgentCard({ result }: { result: AgentResult }) {
   const meta = AGENT_META[result.agent];
+  const ok = result.status === "success";
   return (
-    <div className={`rounded-2xl border ${meta.card} p-md flex flex-col gap-3 animate-slide-up`}>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className="text-ink-muted"><AgentIcon agent={result.agent} /></span>
-          <span className="font-semibold text-ink text-body-sm">{meta.label}</span>
+    <div className={`rounded-2xl border ${meta.border} bg-gradient-to-br ${meta.gradient} p-5 flex flex-col gap-4 shadow-lg ${meta.glow} animate-slide-up backdrop-blur-sm`}>
+      {/* Header */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-3">
+          <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl border ${meta.border} bg-black/20`}>
+            {meta.emoji}
+          </div>
+          <div>
+            <p className="text-sm font-bold text-white">{meta.label}</p>
+            <p className="text-xs text-white/50">{meta.title}</p>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          {result.usedFallback && (
-            <span className="text-caption px-2 py-0.5 rounded-full bg-yellow-50 text-yellow-700 border border-yellow-200">fallback</span>
-          )}
-          <span className={`text-caption px-2 py-0.5 rounded-full border ${meta.badge}`}>{result.provider}</span>
-          <span className="text-caption text-ink-muted font-mono">{result.latencyMs}ms</span>
+        <div className="flex flex-col items-end gap-1.5">
+          <span className={`text-xs px-2 py-0.5 rounded-full border ${meta.badge} font-mono`}>{result.provider}</span>
+          {ok && <span className="text-xs text-white/40 font-mono">{result.latencyMs}ms</span>}
         </div>
       </div>
-      <span className="text-caption text-ink-muted font-mono truncate">{result.model}</span>
-      {result.status === "success" ? (
-        <p className="text-body-sm text-ink leading-relaxed">{result.text}</p>
+
+      {/* Divider */}
+      <div className={`h-px bg-gradient-to-r from-transparent via-white/10 to-transparent`} />
+
+      {/* Content */}
+      {ok ? (
+        <p className="text-sm text-white/85 leading-relaxed">{result.text}</p>
       ) : (
-        <div className="flex items-center gap-2 text-body-sm text-ink-muted italic">
+        <div className="flex items-center gap-2 text-sm text-white/40 italic py-2">
           <AlertTriangle size={14} className="text-yellow-500 shrink-0" />
-          <span>Agent unavailable — {result.status === "timeout" ? "response timed out" : "provider error"}</span>
+          <span>Agent unavailable — {result.status === "timeout" ? "timed out" : "provider error"}</span>
         </div>
       )}
+
+      {/* Footer model tag */}
+      <div className="mt-auto">
+        <span className={`text-xs font-mono px-2 py-0.5 rounded border ${meta.border} text-white/30`}>{result.model}</span>
+        {result.usedFallback && <span className="ml-2 text-xs text-yellow-400/70">↩ fallback</span>}
+      </div>
+    </div>
+  );
+}
+
+function AgentCardSkeleton({ agent }: { agent: AgentName }) {
+  const meta = AGENT_META[agent];
+  return (
+    <div className={`rounded-2xl border ${meta.border} bg-gradient-to-br ${meta.gradient} p-5 flex flex-col gap-4 shadow-lg animate-pulse`}>
+      <div className="flex items-center gap-3">
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl border ${meta.border} bg-black/20`}>
+          {meta.emoji}
+        </div>
+        <div className="space-y-1.5">
+          <div className="h-3 w-20 rounded bg-white/10" />
+          <div className="h-2.5 w-16 rounded bg-white/10" />
+        </div>
+        <div className="ml-auto flex items-center gap-2">
+          <Spinner />
+          <span className="text-xs text-white/40">thinking…</span>
+        </div>
+      </div>
+      <div className={`h-px bg-gradient-to-r from-transparent via-white/10 to-transparent`} />
+      <div className="space-y-2">
+        <div className="h-3 w-full rounded bg-white/10" />
+        <div className="h-3 w-11/12 rounded bg-white/10" />
+        <div className="h-3 w-4/5 rounded bg-white/10" />
+        <div className="h-3 w-3/4 rounded bg-white/10" />
+        <div className="h-3 w-2/3 rounded bg-white/10" />
+      </div>
     </div>
   );
 }
 
 function SynthesisPanel({ synthesis }: { synthesis: DebateSynthesis }) {
   return (
-    <div className="rounded-2xl border border-hairline bg-surface-1 p-md space-y-sm animate-slide-up">
-      <h3 className="text-body-sm font-semibold text-ink flex items-center gap-2">
-        <CheckCircle size={16} className="text-green-600" /> Consensus Analysis
-        <span className="ml-auto text-caption text-ink-muted font-normal">Groq Llama 3.1 8B</span>
-      </h3>
-      <p className="text-body-sm text-ink italic border-l-2 border-accent-blue pl-3">&ldquo;{synthesis.consensus}&rdquo;</p>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-sm text-caption">
-        <div>
-          <p className="text-green-700 font-medium mb-1.5 flex items-center gap-1"><CheckCircle size={12} /> Agreements</p>
-          <ul className="space-y-1">{synthesis.agreements.map((a, i) => <li key={i} className="text-ink-muted leading-relaxed">• {a}</li>)}</ul>
+    <div className="rounded-2xl border border-indigo-500/20 bg-gradient-to-br from-indigo-950/40 to-purple-950/30 p-6 space-y-5 animate-slide-up shadow-lg shadow-indigo-500/5">
+      <div className="flex items-center gap-2">
+        <Scale size={16} className="text-indigo-400" />
+        <h3 className="text-sm font-bold text-white">AI Synthesis</h3>
+        <span className="ml-auto text-xs text-white/30 font-mono">Groq · Llama 3.1 8B</span>
+      </div>
+
+      {/* Consensus quote */}
+      <div className="border-l-2 border-indigo-500/50 pl-4">
+        <p className="text-sm text-white/80 italic leading-relaxed">"{synthesis.consensus}"</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-green-950/30 border border-green-500/20 rounded-xl p-4">
+          <p className="text-xs font-semibold text-green-400 mb-2 flex items-center gap-1.5"><CheckCircle size={12} /> Agreements</p>
+          <ul className="space-y-1.5">
+            {synthesis.agreements.map((a, i) => (
+              <li key={i} className="text-xs text-white/60 leading-relaxed flex items-start gap-1.5">
+                <span className="mt-0.5 text-green-500/60">•</span>{a}
+              </li>
+            ))}
+          </ul>
         </div>
-        <div>
-          <p className="text-red-600 font-medium mb-1.5 flex items-center gap-1"><XCircle size={12} /> Contradictions</p>
-          <ul className="space-y-1">{synthesis.contradictions.map((c, i) => <li key={i} className="text-ink-muted leading-relaxed">• {c}</li>)}</ul>
+        <div className="bg-red-950/30 border border-red-500/20 rounded-xl p-4">
+          <p className="text-xs font-semibold text-red-400 mb-2 flex items-center gap-1.5"><XCircle size={12} /> Contradictions</p>
+          <ul className="space-y-1.5">
+            {synthesis.contradictions.map((c, i) => (
+              <li key={i} className="text-xs text-white/60 leading-relaxed flex items-start gap-1.5">
+                <span className="mt-0.5 text-red-500/60">•</span>{c}
+              </li>
+            ))}
+          </ul>
         </div>
-        <div>
-          <p className="text-amber-600 font-medium mb-1.5 flex items-center gap-1"><HelpCircle size={12} /> Missing Angles</p>
-          <ul className="space-y-1">{synthesis.missingPerspectives.map((m, i) => <li key={i} className="text-ink-muted leading-relaxed">• {m}</li>)}</ul>
+        <div className="bg-amber-950/30 border border-amber-500/20 rounded-xl p-4">
+          <p className="text-xs font-semibold text-amber-400 mb-2 flex items-center gap-1.5"><HelpCircle size={12} /> Missing Angles</p>
+          <ul className="space-y-1.5">
+            {synthesis.missingPerspectives.map((m, i) => (
+              <li key={i} className="text-xs text-white/60 leading-relaxed flex items-start gap-1.5">
+                <span className="mt-0.5 text-amber-500/60">•</span>{m}
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
     </div>
@@ -122,16 +206,22 @@ function SynthesisPanel({ synthesis }: { synthesis: DebateSynthesis }) {
 function FactCheckPanel({ checks }: { checks: FactCheck[] }) {
   if (!checks.length) return null;
   return (
-    <div className="rounded-2xl border border-hairline bg-surface-1 p-md space-y-sm animate-slide-up">
-      <h3 className="text-body-sm font-semibold text-ink">Fact Checks</h3>
+    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 space-y-3 animate-slide-up">
+      <h3 className="text-sm font-bold text-white flex items-center gap-2">
+        <CheckCircle size={14} className="text-emerald-400" /> Fact Checks
+      </h3>
       <div className="space-y-2">
         {checks.map((fc, i) => (
-          <div key={i} className="flex items-start gap-2 text-caption">
+          <div key={i} className="flex items-start gap-2.5 p-3 rounded-xl bg-white/[0.04] border border-white/5">
             <span className="mt-0.5 shrink-0">
-              {fc.verified === true ? <CheckCircle size={12} className="text-green-600" /> : fc.verified === false ? <XCircle size={12} className="text-red-500" /> : <HelpCircle size={12} className="text-ink-muted" />}
+              {fc.verified === true
+                ? <CheckCircle size={13} className="text-emerald-400" />
+                : fc.verified === false
+                ? <XCircle size={13} className="text-red-400" />
+                : <HelpCircle size={13} className="text-white/30" />}
             </span>
-            <span className="text-ink-muted leading-relaxed flex-1">{fc.claim}</span>
-            {fc.source && <span className="shrink-0 text-ink-muted italic">{fc.source}</span>}
+            <span className="text-xs text-white/60 leading-relaxed flex-1">{fc.claim}</span>
+            {fc.source && <span className="shrink-0 text-xs text-white/25 italic">{fc.source}</span>}
           </div>
         ))}
       </div>
@@ -139,17 +229,26 @@ function FactCheckPanel({ checks }: { checks: FactCheck[] }) {
   );
 }
 
+const FOLLOW_UP_COLORS: Record<FollowUpQuestion["category"], string> = {
+  "Deeper Dive":           "bg-indigo-500/20 text-indigo-300 border-indigo-500/30",
+  "Related Topic":         "bg-purple-500/20 text-purple-300 border-purple-500/30",
+  "Practical Application": "bg-teal-500/20  text-teal-300  border-teal-500/30",
+};
+
 function FollowUpPanel({ questions, onSelect }: { questions: FollowUpQuestion[]; onSelect: (q: string) => void }) {
   if (!questions.length) return null;
   return (
-    <div className="rounded-2xl border border-hairline bg-surface-1 p-md space-y-sm animate-slide-up">
-      <h3 className="text-body-sm font-semibold text-ink flex items-center gap-2"><Lightbulb size={14} className="text-yellow-500" /> Explore Further</h3>
+    <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-5 space-y-3 animate-slide-up">
+      <h3 className="text-sm font-bold text-white flex items-center gap-2">
+        <Lightbulb size={14} className="text-yellow-400" /> Explore Further
+      </h3>
       <div className="space-y-2">
         {questions.map((q, i) => (
           <button key={i} onClick={() => onSelect(q.question)}
-            className="w-full text-left flex items-start gap-3 p-3 rounded-xl bg-surface-2 hover:bg-surface-1 border border-hairline hover:border-accent-blue transition-all group">
-            <span className={`mt-0.5 shrink-0 text-caption px-2 py-0.5 rounded-full border ${FOLLOW_UP_COLORS[q.category]}`}>{q.category}</span>
-            <span className="text-body-sm text-ink-muted group-hover:text-ink transition-colors">{q.question}</span>
+            className="w-full text-left flex items-start gap-3 p-3 rounded-xl bg-white/[0.04] border border-white/5 hover:border-indigo-500/40 hover:bg-indigo-500/5 transition-all group">
+            <span className={`mt-0.5 shrink-0 text-xs px-2 py-0.5 rounded-full border ${FOLLOW_UP_COLORS[q.category]}`}>{q.category}</span>
+            <span className="text-xs text-white/55 group-hover:text-white/85 transition-colors leading-relaxed">{q.question}</span>
+            <ArrowRight size={13} className="shrink-0 mt-0.5 ml-auto text-white/20 group-hover:text-indigo-400 transition-colors" />
           </button>
         ))}
       </div>
@@ -164,6 +263,12 @@ const EXAMPLE_TOPICS = [
   "Should social media platforms be liable for user content?",
   "Is nuclear energy essential for net-zero by 2050?",
 ];
+const ELECTION_TOPICS = [
+  "How do I check my name on the electoral roll?",
+  "What is NOTA and when should I use it?",
+  "Can I vote if I moved to a different city?",
+  "What is the Model Code of Conduct?",
+];
 
 export default function DebatePage() {
   const [mounted, setMounted] = useState(false);
@@ -171,7 +276,6 @@ export default function DebatePage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult]   = useState<DebateResponse | null>(null);
   const [error, setError]     = useState<string | null>(null);
-  // Election mode extras
   const [electionMode, setElectionMode] = useState(false);
   const [stateVal, setStateVal]         = useState("");
   const [firstTimeVoter, setFTV]        = useState(false);
@@ -181,15 +285,12 @@ export default function DebatePage() {
   if (!mounted) {
     return (
       <AppShell subtitle="Policy Simulator">
-        <div className="max-w-7xl mx-auto px-6 py-[42px] space-y-[42px]">
-          <div className="text-center space-y-2">
-            <div className="h-9 w-56 bg-surface-2 rounded-xl mx-auto animate-pulse" />
-            <div className="h-4 w-96 bg-surface-2 rounded-lg mx-auto animate-pulse" />
+        <div className="min-h-screen bg-gradient-to-b from-gray-950 to-gray-900 px-6 py-16 space-y-10">
+          <div className="max-w-2xl mx-auto space-y-4 text-center">
+            <div className="h-10 w-64 mx-auto rounded-2xl bg-white/5 animate-pulse" />
+            <div className="h-4 w-96 mx-auto rounded bg-white/5 animate-pulse" />
           </div>
-          <div className="max-w-3xl mx-auto flex gap-3">
-            <div className="flex-1 h-12 bg-surface-2 rounded-2xl animate-pulse" />
-            <div className="w-28 h-12 bg-surface-2 rounded-2xl animate-pulse" />
-          </div>
+          <div className="max-w-2xl mx-auto h-14 rounded-2xl bg-white/5 animate-pulse" />
         </div>
       </AppShell>
     );
@@ -213,77 +314,88 @@ export default function DebatePage() {
     finally { setLoading(false); }
   }
 
+  const examples = electionMode ? ELECTION_TOPICS : EXAMPLE_TOPICS;
+
   return (
     <AppShell subtitle={electionMode ? "Election Mode" : "Policy Simulator"}>
-      <div className="max-w-7xl mx-auto px-6 py-[42px] space-y-[42px]">
-        {/* Hero */}
-        <div className="text-center space-y-3">
-          <h1 className="text-display font-semibold text-ink">
-            {electionMode ? "Civic Planner" : "Policy Simulator"}
-          </h1>
-          <p className="text-body-sm text-ink-muted max-w-xl mx-auto">
-            {electionMode
-              ? "Ask Indian election experts — 4 AI agents give parallel civic perspectives."
-              : "4 AI agents with distinct personas debate in parallel — then we synthesise, fact-check, and suggest what to explore next."}
-          </p>
+      {/* Dark background for the whole page */}
+      <div className="min-h-screen bg-gradient-to-b from-gray-950 via-gray-950 to-gray-900">
+        {/* Hero section */}
+        <div className="relative overflow-hidden">
+          {/* Background glow blobs */}
+          <div className="absolute top-0 left-1/4 w-96 h-96 bg-indigo-600/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute top-0 right-1/4 w-80 h-80 bg-purple-600/8 rounded-full blur-3xl pointer-events-none" />
 
-          {/* Mode toggle */}
-          <div className="flex justify-center">
-            <button
-              onClick={() => { setElectionMode((v) => !v); setResult(null); setError(null); setTopic(""); }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full text-caption font-medium border transition-all ${
-                electionMode
-                  ? "bg-orange-50 text-orange-700 border-orange-200 hover:bg-orange-100"
-                  : "bg-surface-1 text-ink-muted border-hairline hover:border-accent-blue hover:text-ink"
-              }`}
-            >
-              <span className={`w-3 h-3 rounded-full border-2 transition-all ${
-                electionMode ? "bg-orange-500 border-orange-500" : "bg-canvas border-zinc-300"
-              }`} />
-              🗳️ Election Mode
-            </button>
+          <div className="relative max-w-4xl mx-auto px-6 pt-16 pb-12 text-center space-y-6">
+            {/* Badge */}
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-medium">
+              <Sparkles size={12} />
+              {electionMode ? "Civic Intelligence" : "Multi-Model AI Debate"}
+            </div>
+
+            <h1 className="text-4xl md:text-5xl font-bold text-white tracking-tight">
+              {electionMode ? "Civic Planner" : "Policy Simulator"}
+            </h1>
+            <p className="text-base text-white/50 max-w-xl mx-auto leading-relaxed">
+              {electionMode
+                ? "Ask Indian election experts — 4 AI agents give parallel civic perspectives."
+                : "4 AI personas debate in parallel. We synthesise, fact-check, and surface what to explore next."}
+            </p>
+
+            {/* Mode toggle */}
+            <div className="flex justify-center">
+              <button
+                onClick={() => { setElectionMode((v) => !v); setResult(null); setError(null); setTopic(""); }}
+                className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium border transition-all ${
+                  electionMode
+                    ? "bg-orange-500/15 text-orange-300 border-orange-500/30 hover:bg-orange-500/20"
+                    : "bg-white/5 text-white/50 border-white/10 hover:border-white/20 hover:text-white/70"
+                }`}
+              >
+                <span className={`w-2.5 h-2.5 rounded-full transition-all ${electionMode ? "bg-orange-400" : "bg-white/20"}`} />
+                🗳️ Election Mode
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Input */}
-        <div className="max-w-3xl mx-auto space-y-sm">
-          <div className="flex gap-3">
+        <div className="max-w-2xl mx-auto px-6 pb-10 space-y-4">
+          <div className="flex gap-2">
             <input value={topic} onChange={(e) => setTopic(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") void handleDebate(); }}
               placeholder={electionMode ? "Ask about voting, elections, schemes…" : "Enter a policy topic to debate…"}
-              className="flex-1 bg-surface-1 border border-hairline rounded-2xl px-md py-sm text-body text-ink placeholder-ink-muted focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-accent-blue transition-all" />
+              className="flex-1 bg-white/5 border border-white/10 rounded-2xl px-5 py-3.5 text-sm text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/40 transition-all" />
             <button onClick={() => void handleDebate()} disabled={loading || !topic.trim()}
-              className="px-md py-sm rounded-2xl bg-primary hover:opacity-90 disabled:opacity-40 text-on-primary font-semibold text-body-sm transition-all flex items-center gap-2">
-              {loading ? <><Spinner /> Debating…</> : "Simulate →"}
+              className="px-6 py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white font-semibold text-sm transition-all flex items-center gap-2 whitespace-nowrap">
+              {loading ? <><Spinner /> Debating…</> : <>Simulate <ArrowRight size={14} /></>}
             </button>
           </div>
 
-          {/* Election mode extras */}
+          {/* Election extras */}
           {electionMode && (
             <div className="flex flex-wrap items-center gap-3 px-1">
               <select value={stateVal} onChange={(e) => setStateVal(e.target.value)}
-                className="bg-surface-1 border border-hairline rounded-xl px-sm py-1.5 text-caption text-ink focus:outline-none focus:border-accent-blue transition-all">
+                className="bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-xs text-white/70 focus:outline-none focus:border-indigo-500/40 transition-all">
                 <option value="">All India</option>
                 {["Maharashtra","Delhi","Uttar Pradesh","Tamil Nadu","West Bengal","Karnataka","Gujarat","Rajasthan","Bihar","Andhra Pradesh"].map((s) => (
                   <option key={s} value={s}>{s}</option>
                 ))}
               </select>
-              <label className="flex items-center gap-2 text-caption text-ink-muted cursor-pointer select-none">
+              <label className="flex items-center gap-2 text-xs text-white/50 cursor-pointer select-none">
                 <input type="checkbox" checked={firstTimeVoter} onChange={(e) => setFTV(e.target.checked)}
-                  className="w-4 h-4 accent-accent-blue rounded" />
+                  className="w-4 h-4 accent-indigo-500 rounded" />
                 First-time voter
               </label>
             </div>
           )}
 
+          {/* Example chips */}
           {!result && !loading && (
-            <div className="flex flex-wrap gap-2 justify-center">
-              {(electionMode
-                ? ["How do I check my name on the electoral roll?", "What is NOTA and when should I use it?", "Can I vote if I moved to a different city?", "What is the Model Code of Conduct?"]
-                : EXAMPLE_TOPICS
-              ).map((t) => (
+            <div className="flex flex-wrap gap-2 justify-center pt-1">
+              {examples.map((t) => (
                 <button key={t} onClick={() => void handleDebate(t)}
-                  className="text-caption px-3 py-1.5 rounded-full bg-surface-1 border border-hairline text-ink-muted hover:text-ink hover:border-accent-blue transition-all">
+                  className="text-xs px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-white/40 hover:text-white/70 hover:border-white/20 transition-all">
                   {t.length > 55 ? t.slice(0, 55) + "…" : t}
                 </button>
               ))}
@@ -291,60 +403,70 @@ export default function DebatePage() {
           )}
         </div>
 
-        {error && (
-          <div className="max-w-3xl mx-auto bg-red-50 border border-red-200 rounded-2xl p-md text-body-sm text-red-700 flex items-center gap-2 animate-slide-up">
-            <AlertTriangle size={16} /> {error}
-          </div>
-        )}
-
-        {loading && (
-          <div className="space-y-md">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-sm">
-              {AGENT_ORDER.map((a) => {
-                const m = AGENT_META[a];
-                return (
-                  <div key={a} className={`rounded-2xl border ${m.card} p-md space-y-3`}>
-                    <div className="flex items-center gap-2">
-                      <span className="text-ink-muted"><AgentIcon agent={a} /></span>
-                      <span className="text-body-sm font-semibold text-ink">{m.label}</span>
-                      <Spinner />
-                    </div>
-                    <div className="space-y-2 animate-pulse">
-                      <div className="h-3 bg-surface-2 rounded-full w-full" />
-                      <div className="h-3 bg-surface-2 rounded-full w-5/6" />
-                      <div className="h-3 bg-surface-2 rounded-full w-4/6" />
-                    </div>
-                  </div>
-                );
-              })}
+        {/* Content area */}
+        <div className="max-w-6xl mx-auto px-6 pb-20 space-y-6">
+          {/* Error */}
+          {error && (
+            <div className="max-w-2xl mx-auto bg-red-500/10 border border-red-500/25 rounded-2xl p-4 text-sm text-red-300 flex items-center gap-2 animate-slide-up">
+              <AlertTriangle size={15} /> {error}
             </div>
-            <div className="rounded-2xl border border-hairline bg-surface-1 p-md flex items-center gap-3 text-body-sm text-ink-muted">
-              <Spinner /> Running synthesis pipeline (Groq · Gemini · Cerebras)…
-            </div>
-          </div>
-        )}
+          )}
 
-        {result && !loading && (
-          <div className="space-y-md animate-slide-up">
-            <div className="flex items-center justify-between flex-wrap gap-3">
-              <h2 className="text-body-sm font-medium text-ink-muted">Topic: <span className="text-ink">{result.topic}</span></h2>
-              <div className="flex flex-wrap items-center gap-3 text-caption text-ink-muted">
-                <span className="flex items-center gap-1"><Zap size={12} /> Fastest: <strong className="text-ink">{result.modelPerformance.fastestProvider}</strong></span>
-                <span className="flex items-center gap-1"><Timer size={12} /> Avg: <strong className="text-ink">{result.modelPerformance.avgLatencyMs}ms</strong></span>
-                <span className="flex items-center gap-1"><BarChart2 size={12} /> <strong className="text-green-600">{result.modelPerformance.successCount}</strong> / <strong className="text-red-500">{result.modelPerformance.failureCount}</strong></span>
+          {/* Loading — agent skeletons */}
+          {loading && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {AGENT_ORDER.map((a) => <AgentCardSkeleton key={a} agent={a} />)}
+              </div>
+              <div className="rounded-2xl border border-white/8 bg-white/[0.025] p-4 flex items-center gap-3 text-sm text-white/40">
+                <Spinner /> Running synthesis pipeline (Groq · Gemini · Cerebras)…
               </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-sm">
-              {AGENT_ORDER.map((agent) => { const r = result.agents.find((a) => a.agent === agent); return r ? <AgentCard key={agent} result={r} /> : null; })}
+          )}
+
+          {/* Results */}
+          {result && !loading && (
+            <div className="space-y-6 animate-slide-up">
+              {/* Meta bar */}
+              <div className="flex items-center justify-between flex-wrap gap-3 px-1">
+                <div>
+                  <p className="text-xs text-white/35 mb-0.5">Topic</p>
+                  <p className="text-sm font-medium text-white/80">{result.topic}</p>
+                </div>
+                <div className="flex flex-wrap items-center gap-4 text-xs text-white/35">
+                  <span className="flex items-center gap-1.5"><Zap size={11} className="text-yellow-400" /> <span className="text-white/55">Fastest:</span> {result.modelPerformance.fastestProvider}</span>
+                  <span className="flex items-center gap-1.5"><Timer size={11} /> Avg: {result.modelPerformance.avgLatencyMs}ms</span>
+                  <span>
+                    <span className="text-emerald-400 font-semibold">{result.modelPerformance.successCount}</span>
+                    <span className="mx-1">/</span>
+                    <span className="text-red-400 font-semibold">{result.modelPerformance.failureCount}</span>
+                    <span className="ml-1">agents</span>
+                  </span>
+                </div>
+              </div>
+
+              {/* Agent grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {AGENT_ORDER.map((agent) => {
+                  const r = result.agents.find((a) => a.agent === agent);
+                  return r ? <AgentCard key={agent} result={r} /> : null;
+                })}
+              </div>
+
+              {/* Synthesis */}
+              <SynthesisPanel synthesis={result.synthesis} />
+
+              {/* Fact-check + Follow-up */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <FactCheckPanel checks={result.factChecks} />
+                <FollowUpPanel questions={result.followUpQuestions} onSelect={(q) => { setTopic(q); void handleDebate(q); }} />
+              </div>
+
+              {/* Footer ID */}
+              <p className="text-center text-xs text-white/20 font-mono pt-2">debate/{result.debateId}</p>
             </div>
-            <SynthesisPanel synthesis={result.synthesis} />
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-sm">
-              <FactCheckPanel checks={result.factChecks} />
-              <FollowUpPanel questions={result.followUpQuestions} onSelect={(q) => { setTopic(q); void handleDebate(q); }} />
-            </div>
-            <p className="text-center text-caption text-ink-muted font-mono">debate/{result.debateId}</p>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </AppShell>
   );
